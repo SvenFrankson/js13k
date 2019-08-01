@@ -51,6 +51,25 @@ class GameObject {
     }
 }
 
+class Stone extends GameObject {
+
+    constructor(e) {
+        super(e);
+        this.p = { x: 0, y: 0};
+    }
+
+    draw() {
+        let ctx = this.engine.context;
+        let oX = this.engine.width * 0.5 - this.engine.cX;
+        let oY = this.engine.height * 0.5 - this.engine.cY;
+        
+        ctx.beginPath();
+        ctx.arc(oX + this.p.x, oY + this.p.y, 10, 0, 2 * Math.PI);
+        ctx.fillStyle = "#e1e6f4";
+        ctx.fill();
+    }
+}
+
 class Blob extends GameObject {
 
     constructor(e) {
@@ -68,15 +87,55 @@ class Blob extends GameObject {
 
     draw() {
         let ctx = this.engine.context;
-        let oX = this.engine.width * 0.5 + this.engine.cX;
-        let oY = this.engine.height * 0.5 + this.engine.cY;
+        let oX = this.engine.width * 0.5 - this.engine.cX;
+        let oY = this.engine.height * 0.5 - this.engine.cY;
+
+        console.log(oX + " " + oY);
+
+        let rN = 15;
+        let rB = 20;
+
+        let dX = this.pBod.x - this.pNuc.x;
+        let dY = this.pBod.y - this.pNuc.y;
+        let d = Math.sqrt(dX * dX + dY * dY);
+        dX /= d;
+        dY /= d;
+
+        rB -= d / 15;
+        rB = Math.max(rB, rN);
+
         ctx.beginPath();
-        ctx.arc(oX + this.pBod.x, oY + this.pBod.y, 20, 0, 2 * Math.PI);
+        ctx.arc(oX + this.pBod.x, oY + this.pBod.y, rB, 0, 2 * Math.PI);
+        ctx.fillStyle = "#8f21dd";
+        ctx.fill();
+
+        for (let i = 0; i < d * 0.5; i += 1) {
+            let dd = 1 - i / (0.5 * d);
+            dd = dd * dd;
+            let r = rN * dd + rN * 0.5 * (1 - dd);
+            ctx.beginPath();
+            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
+            ctx.fillStyle = "#8f21dd";
+            ctx.fill();
+        }
+
+        for (let i = d * 0.5; i < d; i += 1) {
+            let dd = (i - 0.5 * d) / (0.5 * d);
+            dd = Math.pow(dd, 1.5);
+            let r = rN * 0.5 * (1 - dd) + rB * dd;
+            ctx.beginPath();
+            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
+            ctx.fillStyle = "#8f21dd";
+            ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN, 0, 2 * Math.PI);
         ctx.fillStyle = "#8f21dd";
         ctx.fill();
 
         ctx.beginPath();
-        ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, 10 * this.nucTemp, 0, 2 * Math.PI);
+        ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN * 0.6 * this.nucTemp, 0, 2 * Math.PI);
         ctx.fillStyle = "#662a91";
         ctx.fill();
     }
@@ -86,7 +145,7 @@ class Blob extends GameObject {
             this.nucTemp -= 1 / 60;
         }
         else {
-            this.nucTemp += 1 / 60;
+            this.nucTemp += 1 / 30;
             this.nucTemp = Math.min(this.nucTemp, 1);
         }
 
@@ -123,6 +182,40 @@ class Blob extends GameObject {
             this.pBod.x += this.vBod.x / 60;
             this.pBod.y += this.vBod.y / 60;
         }
+
+        if (this.pNuc.x < - 200) {
+            this.pNuc.x = - 200;
+            this.vNuc.x *= -1;
+        }
+        if (this.pNuc.y < - 200) {
+            this.pNuc.y = - 200;
+            this.vNuc.y *= -1;
+        }
+        if (this.pNuc.x > 200) {
+            this.pNuc.x = 200;
+            this.vNuc.x *= -1;
+        }
+        if (this.pNuc.y > 200) {
+            this.pNuc.y = 200;
+            this.vNuc.y *= -1;
+        }
+
+        if (this.pBod.x < - 200) {
+            this.pBod.x = - 200;
+            this.vBod.x *= -1;
+        }
+        if (this.pBod.y < - 200) {
+            this.pBod.y = - 200;
+            this.vBod.y *= -1;
+        }
+        if (this.pBod.x > 200) {
+            this.pBod.x = 200;
+            this.vBod.x *= -1;
+        }
+        if (this.pBod.y > 200) {
+            this.pBod.y = 200;
+            this.vBod.y *= -1;
+        }
     }
 }
 
@@ -130,6 +223,17 @@ window.addEventListener("load", () => {
     let e = new Engine(400, 400);
     let b = new Blob(e);
     b.instantiate();
+
+    let s00 = new Stone(e);
+    s00.p.x = -200;
+    s00.p.y = -200;
+    s00.instantiate();
+    
+    let s11 = new Stone(e);
+    s11.p.x = 200;
+    s11.p.y = 200;
+    s11.instantiate();
+
     let loop = () => {
         e.update();
         e.draw();
