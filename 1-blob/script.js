@@ -10,6 +10,28 @@ class Engine {
         this.canvas.height = this.height;
         this.context = this.canvas.getContext("2d");
         this.gameObjects = [];
+
+        let backgroundCanvas = document.createElement("canvas");
+        backgroundCanvas.width = 2 * w;
+        backgroundCanvas.height = 2 * h;
+        let backgroundContext = backgroundCanvas.getContext("2d");
+        backgroundContext.fillStyle = "#e1f0f4";
+        backgroundContext.fillRect(0, 0, 2 * w, 2 * h);
+        for (let i = 0; i < 10; i++) {
+            backgroundContext.lineWidth = 10 + Math.random() * 10;
+            let x = Math.random() * 2 * w;
+            let y = Math.random() * 2 * h;
+            let r = Math.random() * 200 + 50;
+            for (let ii = -1; ii <= 1; ii++) {
+                for (let jj = -1; jj <= 1; jj++) {
+                    backgroundContext.beginPath();
+                    backgroundContext.arc(ii * 2 * w + x, jj * 2 * h + y, r, 0, 2 * Math.PI);
+                    backgroundContext.strokeStyle = "#b1b6c4";
+                    backgroundContext.stroke();
+                }
+            }
+        }
+        this.backgroundData = backgroundContext.getImageData(0, 0, 2 * w, 2 * h);
     }
 
     update() {
@@ -45,8 +67,24 @@ class Engine {
     }
 
     draw() {
-        this.context.fillStyle = "#e1f0f4";
-        this.context.fillRect(0, 0, this.width, this.height);
+        let x = - this.cX;
+        while (x < 0) {
+            x += 2 * this.width;
+        }
+        while (x > 2 * this.width) {
+            x -= 2 * this.width;
+        }
+        let y = - this.cY;
+        while (y < 0) {
+            y += 2 * this.height;
+        }
+        while (y > 2 * this.height) {
+            y -= 2 * this.height;
+        }
+        this.context.putImageData(this.backgroundData, x, y);
+        this.context.putImageData(this.backgroundData, x - 2 * this.width, y);
+        this.context.putImageData(this.backgroundData, x, y - 2 * this.height);
+        this.context.putImageData(this.backgroundData, x - 2 * this.width, y - 2 * this.height);
         this.gameObjects.forEach(
             go => {
                 if (go.draw) {
@@ -106,6 +144,8 @@ class Blob extends GameObject {
         this.vNuc = { x: 0, y: 0 };
         this.pBod = { x: -50, y: 20 };
         this.vBod = { x: 0, y: 0 };
+        this.pAnchor = { x: 0, y: 0};
+        // 87 12 74 91
     }
 
     draw() {
@@ -159,14 +199,21 @@ class Blob extends GameObject {
         ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN * 0.6 * this.nucTemp, 0, 2 * Math.PI);
         ctx.fillStyle = "#662a91";
         ctx.fill();
+
+        if (this.nucFreezing) {
+            ctx.beginPath();
+            ctx.arc(oX + this.pAnchor.x, oY + this.pAnchor.y, 10, 0, 2 * Math.PI);
+            ctx.fillStyle = "red";
+            ctx.fill();
+        }
     }
 
     update() {
         if (this.nucFreezing) {
-            this.nucTemp -= 1 / 60;
+            this.nucTemp -= 1 / 120;
         }
         else {
-            this.nucTemp += 1 / 30;
+            this.nucTemp += 1 / 60;
             this.nucTemp = Math.min(this.nucTemp, 1);
         }
 
@@ -191,6 +238,19 @@ class Blob extends GameObject {
             this.vBod.y += fNoBY * d * this.springK / 60 / this.mBod;
         }
 
+        if (this.nucFreezing) {
+            let fAoBX = this.pAnchor.x - this.pBod.x;
+            let fAoBY = this.pAnchor.y - this.pBod.y;
+            let dA = Math.sqrt(fAoBX * fAoBX + fAoBY * fAoBY);
+            if (dA > 0) {
+                fAoBX /= dA;
+                fAoBY /= dA;
+    
+                this.vBod.x += fAoBX * dA * this.springK * 10 / 60 / this.mBod;
+                this.vBod.y += fAoBY * dA * this.springK * 10 / 60 / this.mBod;
+            }
+        }
+
         this.vNuc.x *= 0.99 * this.nucTemp;
         this.vNuc.y *= 0.99 * this.nucTemp;
         this.vBod.x *= 0.99;
@@ -199,11 +259,10 @@ class Blob extends GameObject {
         this.pNuc.x += this.vNuc.x / 60;
         this.pNuc.y += this.vNuc.y / 60;
 
-        if (!this.nucFreezing) {
-            this.pBod.x += this.vBod.x / 60;
-            this.pBod.y += this.vBod.y / 60;
-        }
+        this.pBod.x += this.vBod.x / 60;
+        this.pBod.y += this.vBod.y / 60;
 
+        /*
         if (this.pNuc.x < - 200) {
             this.pNuc.x = - 200;
             this.vNuc.x *= -1;
@@ -237,52 +296,51 @@ class Blob extends GameObject {
             this.pBod.y = 200;
             this.vBod.y *= -1;
         }
+        */
     }
 }
 
 window.addEventListener("load", () => {
-    let e = new Engine(400, 400);
-    let b = new Blob(e);
+    let eng = new Engine(400, 400);
+    let b = new Blob(eng);
     b.instantiate();
-    e.blob = b;
+    eng.blob = b;
 
-    let s00 = new Stone(e);
-    s00.p.x = -200;
-    s00.p.y = -200;
-    s00.instantiate();
-    
-    let s11 = new Stone(e);
-    s11.p.x = 200;
-    s11.p.y = 200;
-    s11.instantiate();
+    for (let i = 0; i < 100; i++) {
+        let s00 = new Stone(eng);
+        s00.p.x = - 2000 + Math.random() * 4000;
+        s00.p.y = - 2000 + Math.random() * 4000;
+        s00.instantiate();
+    }
 
     let loop = () => {
-        e.update();
-        e.draw();
+        eng.update();
+        eng.draw();
         requestAnimationFrame(loop);
     }
     loop();
     let pdX = NaN;
     let pdY = NaN;
-    e.canvas.addEventListener("pointerdown", (e) => {
+    eng.canvas.addEventListener("pointerdown", (e) => {
         if (b.nucTemp === 1) {
             b.nucFreezing = true;
-            pdX = e.clientX;
-            pdY = e.clientY;
+            b.pAnchor.x = e.clientX - 9 + eng.cX - eng.width * 0.5;
+            b.pAnchor.y = e.clientY - 9 + eng.cY - eng.height * 0.5;
+            console.log(e.clientX + " " + e.clientY);
+            console.log(b.pAnchor.x + " " + b.pAnchor.y);
         }
     });
-    e.canvas.addEventListener("pointermove", (e) => {
+    eng.canvas.addEventListener("pointermove", (e) => {
         if (!b.nucFreezing) {
             return;
         }
-        let x = e.clientX - pdX;
-        let y = e.clientY - pdY;
-        pdX = e.clientX;
-        pdY = e.clientY;
-        b.pBod.x += x;
-        b.pBod.y += y;
+        b.pAnchor.x = e.clientX - 9 + eng.cX - eng.width * 0.5;   
+        b.pAnchor.y = e.clientY - 9 + eng.cY - eng.height * 0.5;
+        console.log(e.clientX + " " + e.clientY);
+        console.log(b.pAnchor.x + " " + b.pAnchor.y);
     });
-    e.canvas.addEventListener("pointerup", (e) => {
+    eng.canvas.addEventListener("pointerup", (e) => {
         b.nucFreezing = false;
+        b.nucTemp = 0;
     });
 });
