@@ -2,6 +2,7 @@ class Engine {
     constructor(w, h) {
         this.cX = 0;
         this.cY = 0;
+        this.speed = 1;
         this.width = w;
         this.height = h;
         this.canvas = document.getElementsByTagName("canvas")[0];
@@ -12,6 +13,28 @@ class Engine {
     }
 
     update() {
+        if (this.blob) {
+            if (!this.blob.nucFreezing) {
+                let newCX = (this.blob.pNuc.x + this.blob.pBod.x) * 0.5;
+                let newCY = (this.blob.pNuc.y + this.blob.pBod.y) * 0.5;
+                let dX = newCX - this.cX;
+                if (dX > this.blob.nucTemp) {
+                    dX = this.blob.nucTemp;
+                }
+                if (dX < - this.blob.nucTemp) {
+                    dX = - this.blob.nucTemp;
+                }
+                let dY = newCY - this.cY;
+                if (dY > this.blob.nucTemp) {
+                    dY = this.blob.nucTemp;
+                }
+                if (dY < - this.blob.nucTemp) {
+                    dY = - this.blob.nucTemp;
+                }
+                this.cX += dX;
+                this.cY += dY;
+            }
+        }
         this.gameObjects.forEach(
             go => {
                 if (go.update) {
@@ -65,7 +88,7 @@ class Stone extends GameObject {
         
         ctx.beginPath();
         ctx.arc(oX + this.p.x, oY + this.p.y, 10, 0, 2 * Math.PI);
-        ctx.fillStyle = "#e1e6f4";
+        ctx.fillStyle = "#d1d6e4";
         ctx.fill();
     }
 }
@@ -89,8 +112,6 @@ class Blob extends GameObject {
         let ctx = this.engine.context;
         let oX = this.engine.width * 0.5 - this.engine.cX;
         let oY = this.engine.height * 0.5 - this.engine.cY;
-
-        console.log(oX + " " + oY);
 
         let rN = 15;
         let rB = 20;
@@ -223,6 +244,7 @@ window.addEventListener("load", () => {
     let e = new Engine(400, 400);
     let b = new Blob(e);
     b.instantiate();
+    e.blob = b;
 
     let s00 = new Stone(e);
     s00.p.x = -200;
