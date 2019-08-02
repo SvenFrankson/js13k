@@ -112,26 +112,56 @@ class GameObject {
     }
 }
 
-class Stone extends GameObject {
+class Disc extends GameObject {
 
-    constructor(e, r) {
+    constructor(e, r, h, color, colorShadow) {
         super(e);
+        this.type = "disc";
         this.r = r;
+        this.h = h;
         this.p = { x: 0, y: 0};
+        this.color = color;
+        this.colorShadow = colorShadow;
     }
 
     draw() {
         let ctx = this.engine.context;
         let oX = this.engine.width * 0.5 - this.engine.cX;
         let oY = this.engine.height * 0.5 - this.engine.cY;
-        
-        ctx.beginPath();
-        ctx.arc(oX + this.p.x, oY + this.p.y, this.r, 0, 2 * Math.PI);
-        ctx.fillStyle = "#d1d6e4";
-        ctx.fill();
+
+        let x = oX + this.p.x;
+        let y = oY + this.p.y;
+
+        if (x > - 20 - this.r) {
+            if (y > - 20 - this.r) {
+                if (x < this.engine.width + 20 + this.r) {
+                    if (y < this.engine.height + 20 + this.r) {
+                        let dx = this.h - 2 * this.h * x / this.engine.width;
+                        let dy = this.h - 2 * this.h * y / this.engine.height;
+                        
+                        ctx.beginPath();
+                        ctx.arc(x + dx, y + dy, this.r, 0, 2 * Math.PI);
+                        ctx.fillStyle = this.colorShadow;
+                        ctx.fill();
+                        
+                        ctx.beginPath();
+                        ctx.arc(x, y, this.r, 0, 2 * Math.PI);
+                        ctx.fillStyle = this.color;
+                        ctx.fill();
+                    }
+                }
+            }
+        }
     }
 
     collide(x, y, r) {
+        let dx = x - this.p.x;
+        let dy = y - this.p.y;
+        let dd = dx * dx + dy * dy;
+        return dd < (r + this.r) * (r + this.r);
+    }
+
+    collisionNormal(x, y, r) {
         let dx = x - this.p.x;
         let dy = y - this.p.y;
         let dd = dx * dx + dy * dy;
@@ -143,10 +173,32 @@ class Stone extends GameObject {
     }
 }
 
+class Coin extends Disc {
+    constructor(e, r, h) {
+        super(e, r, h, "#e0ce19", "#a89d32");
+        this.type = "coin";
+    }
+}
+
+class Spike extends Disc {
+    constructor(e, r, h) {
+        super(e, r, h, "#e01941", "#8c2e41");
+        this.type = "spike";
+    }
+}
+
+class Stone extends Disc {
+    constructor(e, r, h) {
+        super(e, r, h, "#d1d6e4", "#b1b6c4");
+        this.type = "stone";
+    }
+}
+
 class Blob extends GameObject {
 
     constructor(e) {
         super(e);
+        this.hp = 3;
         this.springK = 4;
         this.mBod = 2;
         this.mNuc = 1;
@@ -182,7 +234,7 @@ class Blob extends GameObject {
         ctx.fillStyle = "#8f21dd";
         ctx.fill();
 
-        for (let i = 0; i < d * 0.5; i += 1) {
+        for (let i = 0; i < d * 0.5; i += 2) {
             let dd = 1 - i / (0.5 * d);
             dd = dd * dd;
             let r = rN * dd + rN * 0.5 * (1 - dd);
@@ -192,7 +244,7 @@ class Blob extends GameObject {
             ctx.fill();
         }
 
-        for (let i = d * 0.5; i < d; i += 1) {
+        for (let i = d * 0.5; i < d; i += 2) {
             let dd = (i - 0.5 * d) / (0.5 * d);
             dd = Math.pow(dd, 1.5);
             let r = rN * 0.5 * (1 - dd) + rB * dd;
@@ -225,7 +277,7 @@ class Blob extends GameObject {
             this.nucTemp -= 1 / 120;
         }
         else {
-            this.nucTemp += 1 / 60;
+            this.nucTemp += 1 / 90;
             this.nucTemp = Math.min(this.nucTemp, 1);
         }
 
@@ -258,8 +310,8 @@ class Blob extends GameObject {
                 fAoBX /= dA;
                 fAoBY /= dA;
     
-                this.vBod.x += fAoBX * dA * this.springK * 10 / 60 / this.mBod;
-                this.vBod.y += fAoBY * dA * this.springK * 10 / 60 / this.mBod;
+                this.vBod.x += fAoBX * dA * this.springK * 20 / 60 / this.mBod;
+                this.vBod.y += fAoBY * dA * this.springK * 20 / 60 / this.mBod;
             }
         }
 
@@ -271,21 +323,39 @@ class Blob extends GameObject {
         for (let i = 0; i < this.engine.gameObjects.length; i++) {
             let go = this.engine.gameObjects[i];
             if (go.collide) {
-                let nB = go.collide(this.pBod.x, this.pBod.y, 20);
-                if (nB) {
-                    let dn = this.vBod.x * nB.x + this.vBod.y * nB.y;
-                    this.pBod.x = go.p.x + nB.x * (20 + go.r + 1);
-                    this.pBod.y = go.p.y + nB.y * (20 + go.r + 1);
-                    this.vBod.x -= 2 * dn * nB.x;
-                    this.vBod.y -= 2 * dn * nB.y;
+                let bCollide = go.collide(this.pBod.x, this.pBod.y, 20);
+                if (bCollide) {
+                    if (go.type === "stone") {
+                        let nB = go.collisionNormal(this.pBod.x, this.pBod.y, 20);
+                        let dn = this.vBod.x * nB.x + this.vBod.y * nB.y;
+                        this.pBod.x = go.p.x + nB.x * (20 + go.r + 1);
+                        this.pBod.y = go.p.y + nB.y * (20 + go.r + 1);
+                        this.vBod.x -= 2 * dn * nB.x;
+                        this.vBod.y -= 2 * dn * nB.y;
+                    }
+                    else if (go.type === "spike") {
+                        this.hp = Math.min(this.hp - 1, 0);
+                        go.destroy();
+                    }
                 }
-                let nN = go.collide(this.pNuc.x, this.pNuc.y, 15);
-                if (nN) {
-                    let dn = this.vNuc.x * nN.x + this.vNuc.y * nN.y;
-                    this.pNuc.x = go.p.x + nN.x * (15 + go.r + 1);
-                    this.pNuc.y = go.p.y + nN.y * (15 + go.r + 1);
-                    this.vNuc.x -= 2 * dn * nN.x;
-                    this.vNuc.y -= 2 * dn * nN.y;
+                let nCollide = go.collide(this.pNuc.x, this.pNuc.y, 15);
+                if (nCollide) {
+                    if (go.type === "stone") {
+                        let nN = go.collisionNormal(this.pNuc.x, this.pNuc.y, 15);
+                        let dn = this.vNuc.x * nN.x + this.vNuc.y * nN.y;
+                        this.pNuc.x = go.p.x + nN.x * (15 + go.r + 1);
+                        this.pNuc.y = go.p.y + nN.y * (15 + go.r + 1);
+                        this.vNuc.x -= 2 * dn * nN.x;
+                        this.vNuc.y -= 2 * dn * nN.y;
+                    }
+                    else if (go.type === "coin") {
+                        this.hp = Math.min(this.hp + 1, 3);
+                        go.destroy();
+                    }
+                    else if (go.type === "spike") {
+                        this.hp = Math.min(this.hp - 1, 0);
+                        go.destroy();
+                    }
                 }
             }
         }
@@ -335,16 +405,30 @@ class Blob extends GameObject {
 }
 
 window.addEventListener("load", () => {
-    let eng = new Engine(400, 400);
+    let eng = new Engine(700, 700);
     let b = new Blob(eng);
     b.instantiate();
     eng.blob = b;
 
     for (let i = 0; i < 100; i++) {
-        let s00 = new Stone(eng, 10 + 50 * Math.random());
-        s00.p.x = - 2000 + Math.random() * 4000;
-        s00.p.y = - 2000 + Math.random() * 4000;
-        s00.instantiate();
+        let s = new Stone(eng, 10 + 50 * Math.random(), 5 + 10 * Math.random());
+        s.p.x = - 2000 + Math.random() * 4000;
+        s.p.y = - 2000 + Math.random() * 4000;
+        s.instantiate();
+    }
+
+    for (let i = 0; i < 50; i++) {
+        let s = new Spike(eng, 5 + 10 * Math.random(), 2 + 5 * Math.random());
+        s.p.x = - 2000 + Math.random() * 4000;
+        s.p.y = - 2000 + Math.random() * 4000;
+        s.instantiate();
+    }
+
+    for (let i = 0; i < 50; i++) {
+        let c = new Coin(eng, 5 + 10 * Math.random(), 2 + 5 * Math.random());
+        c.p.x = - 2000 + Math.random() * 4000;
+        c.p.y = - 2000 + Math.random() * 4000;
+        c.instantiate();
     }
 
     let loop = () => {
