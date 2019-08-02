@@ -40,18 +40,18 @@ class Engine {
                 let newCX = (this.blob.pNuc.x + this.blob.pBod.x) * 0.5;
                 let newCY = (this.blob.pNuc.y + this.blob.pBod.y) * 0.5;
                 let dX = newCX - this.cX;
-                if (dX > this.blob.nucTemp) {
-                    dX = this.blob.nucTemp;
+                if (dX > this.blob.nucTemp * 2) {
+                    dX = this.blob.nucTemp * 2;
                 }
-                if (dX < - this.blob.nucTemp) {
-                    dX = - this.blob.nucTemp;
+                if (dX < - this.blob.nucTemp * 2) {
+                    dX = - this.blob.nucTemp * 2;
                 }
                 let dY = newCY - this.cY;
-                if (dY > this.blob.nucTemp) {
-                    dY = this.blob.nucTemp;
+                if (dY > this.blob.nucTemp * 2) {
+                    dY = this.blob.nucTemp * 2;
                 }
-                if (dY < - this.blob.nucTemp) {
-                    dY = - this.blob.nucTemp;
+                if (dY < - this.blob.nucTemp * 2) {
+                    dY = - this.blob.nucTemp * 2;
                 }
                 this.cX += dX;
                 this.cY += dY;
@@ -114,8 +114,9 @@ class GameObject {
 
 class Stone extends GameObject {
 
-    constructor(e) {
+    constructor(e, r) {
         super(e);
+        this.r = r;
         this.p = { x: 0, y: 0};
     }
 
@@ -125,9 +126,20 @@ class Stone extends GameObject {
         let oY = this.engine.height * 0.5 - this.engine.cY;
         
         ctx.beginPath();
-        ctx.arc(oX + this.p.x, oY + this.p.y, 10, 0, 2 * Math.PI);
+        ctx.arc(oX + this.p.x, oY + this.p.y, this.r, 0, 2 * Math.PI);
         ctx.fillStyle = "#d1d6e4";
         ctx.fill();
+    }
+
+    collide(x, y, r) {
+        let dx = x - this.p.x;
+        let dy = y - this.p.y;
+        let dd = dx * dx + dy * dy;
+        if (dd < (r + this.r) * (r + this.r)) {
+            let d = Math.sqrt(dd);
+            let n = { x: dx / d, y: dy / d}
+            return n;
+        }
     }
 }
 
@@ -136,7 +148,7 @@ class Blob extends GameObject {
     constructor(e) {
         super(e);
         this.springK = 4;
-        this.mBod = 1;
+        this.mBod = 2;
         this.mNuc = 1;
         this.nucFreezing = false;
         this.nucTemp = 1;
@@ -246,15 +258,37 @@ class Blob extends GameObject {
                 fAoBX /= dA;
                 fAoBY /= dA;
     
-                this.vBod.x += fAoBX * dA * this.springK * 4 / 60 / this.mBod;
-                this.vBod.y += fAoBY * dA * this.springK * 4 / 60 / this.mBod;
+                this.vBod.x += fAoBX * dA * this.springK * 10 / 60 / this.mBod;
+                this.vBod.y += fAoBY * dA * this.springK * 10 / 60 / this.mBod;
             }
         }
 
-        this.vNuc.x *= 0.995 * this.nucTemp;
-        this.vNuc.y *= 0.995 * this.nucTemp;
-        this.vBod.x *= 0.995;
-        this.vBod.y *= 0.995;
+        this.vNuc.x *= 0.992 * this.nucTemp;
+        this.vNuc.y *= 0.992 * this.nucTemp;
+        this.vBod.x *= 0.992;
+        this.vBod.y *= 0.992;
+
+        for (let i = 0; i < this.engine.gameObjects.length; i++) {
+            let go = this.engine.gameObjects[i];
+            if (go.collide) {
+                let nB = go.collide(this.pBod.x, this.pBod.y, 20);
+                if (nB) {
+                    let dn = this.vBod.x * nB.x + this.vBod.y * nB.y;
+                    this.pBod.x = go.p.x + nB.x * (20 + go.r + 1);
+                    this.pBod.y = go.p.y + nB.y * (20 + go.r + 1);
+                    this.vBod.x -= 2 * dn * nB.x;
+                    this.vBod.y -= 2 * dn * nB.y;
+                }
+                let nN = go.collide(this.pNuc.x, this.pNuc.y, 15);
+                if (nN) {
+                    let dn = this.vNuc.x * nN.x + this.vNuc.y * nN.y;
+                    this.pNuc.x = go.p.x + nN.x * (15 + go.r + 1);
+                    this.pNuc.y = go.p.y + nN.y * (15 + go.r + 1);
+                    this.vNuc.x -= 2 * dn * nN.x;
+                    this.vNuc.y -= 2 * dn * nN.y;
+                }
+            }
+        }
 
         this.pNuc.x += this.vNuc.x / 60;
         this.pNuc.y += this.vNuc.y / 60;
@@ -307,7 +341,7 @@ window.addEventListener("load", () => {
     eng.blob = b;
 
     for (let i = 0; i < 100; i++) {
-        let s00 = new Stone(eng);
+        let s00 = new Stone(eng, 10 + 50 * Math.random());
         s00.p.x = - 2000 + Math.random() * 4000;
         s00.p.y = - 2000 + Math.random() * 4000;
         s00.instantiate();
