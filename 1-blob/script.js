@@ -1,3 +1,11 @@
+function scaleColor(hexColor, s) {
+    let o = hexColor.length === 7 ? 1 : 0;
+    let r = Math.floor(parseInt(hexColor.substring(o, o + 2), 16) * s);
+    let g = Math.floor(parseInt(hexColor.substring(o + 2, o + 4), 16) * s);
+    let b = Math.floor(parseInt(hexColor.substring(o + 4, o + 6), 16) * s);
+    return (o === 1 ? "#" : "") + r.toString(16).padStart(2, "0") + g.toString(16).padStart(2, "0") + b.toString(16).padStart(2, "0");
+}
+
 class Engine {
     constructor(w, h) {
         this.cX = 0;
@@ -114,14 +122,14 @@ class GameObject {
 
 class Disc extends GameObject {
 
-    constructor(e, r, h, color, colorShadow) {
+    constructor(e, r, h, color) {
         super(e);
         this.type = "disc";
         this.r = r;
         this.h = h;
         this.p = { x: 0, y: 0};
         this.color = color;
-        this.colorShadow = colorShadow;
+        this.colorShadow = scaleColor(color, 0.5);
     }
 
     draw() {
@@ -175,21 +183,21 @@ class Disc extends GameObject {
 
 class Coin extends Disc {
     constructor(e, r, h) {
-        super(e, r, h, "#e0ce19", "#a89d32");
+        super(e, r, h, "#e0ce19");
         this.type = "coin";
     }
 }
 
 class Spike extends Disc {
     constructor(e, r, h) {
-        super(e, r, h, "#e01941", "#8c2e41");
+        super(e, r, h, "#e01941");
         this.type = "spike";
     }
 }
 
 class Stone extends Disc {
     constructor(e, r, h) {
-        super(e, r, h, "#d1d6e4", "#b1b6c4");
+        super(e, r, h, "#d1d6e4");
         this.type = "stone";
     }
 }
@@ -229,9 +237,12 @@ class Blob extends GameObject {
         rB -= d / 15;
         rB = Math.max(rB, rN);
 
+        let c = scaleColor("#58bf21", this.hp / 3);
+        let cN = scaleColor(c, 0.5);
+
         ctx.beginPath();
         ctx.arc(oX + this.pBod.x, oY + this.pBod.y, rB, 0, 2 * Math.PI);
-        ctx.fillStyle = "#8f21dd";
+        ctx.fillStyle = c;
         ctx.fill();
 
         for (let i = 0; i < d * 0.5; i += 2) {
@@ -240,7 +251,7 @@ class Blob extends GameObject {
             let r = rN * dd + rN * 0.5 * (1 - dd);
             ctx.beginPath();
             ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
-            ctx.fillStyle = "#8f21dd";
+            ctx.fillStyle = c;
             ctx.fill();
         }
 
@@ -250,18 +261,18 @@ class Blob extends GameObject {
             let r = rN * 0.5 * (1 - dd) + rB * dd;
             ctx.beginPath();
             ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
-            ctx.fillStyle = "#8f21dd";
+            ctx.fillStyle = c;
             ctx.fill();
         }
 
         ctx.beginPath();
         ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN, 0, 2 * Math.PI);
-        ctx.fillStyle = "#8f21dd";
+        ctx.fillStyle = c;
         ctx.fill();
 
         ctx.beginPath();
         ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN * 0.6 * this.nucTemp, 0, 2 * Math.PI);
-        ctx.fillStyle = "#662a91";
+        ctx.fillStyle = cN;
         ctx.fill();
 
         if (this.nucFreezing) {
@@ -334,7 +345,7 @@ class Blob extends GameObject {
                         this.vBod.y -= 2 * dn * nB.y;
                     }
                     else if (go.type === "spike") {
-                        this.hp = Math.min(this.hp - 1, 0);
+                        this.hp = Math.max(this.hp - 1, 0);
                         go.destroy();
                     }
                 }
@@ -353,7 +364,7 @@ class Blob extends GameObject {
                         go.destroy();
                     }
                     else if (go.type === "spike") {
-                        this.hp = Math.min(this.hp - 1, 0);
+                        this.hp = Math.max(this.hp - 1, 0);
                         go.destroy();
                     }
                 }
