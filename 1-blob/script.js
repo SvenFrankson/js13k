@@ -181,6 +181,70 @@ class Disc extends GameObject {
     }
 }
 
+class Shell extends GameObject {
+    constructor(e, r) {
+        super(e);
+        this.p = { x: 0, y: 0};
+        this.r = r;
+        this.a = 0;
+        this.coins = [
+            new Coin(e, 10, 5),
+            new Coin(e, 10, 5),
+            new Coin(e, 10, 5),
+            new Coin(e, 10, 5)
+        ];
+        this.spikes = [
+            new Spike(e, 10, 5),
+            new Spike(e, 10, 5),
+            new Spike(e, 10, 5),
+            new Spike(e, 10, 5)
+        ];
+    }
+
+    instantiate() {
+        this.engine.gameObjects.push(this);
+        this.coins.forEach(c => {
+            c.instantiate();
+        })
+        this.spikes.forEach(s => {
+            s.instantiate();
+        })
+    }
+
+    destroy() {
+        let i = this.engine.gameObjects.indexOf(this);
+        if (i !== -1) {
+            this.engine.gameObjects.splice(i, 1);
+        }
+        this.coins.forEach(c => {
+            c.destroy();
+        })
+        this.spikes.forEach(s => {
+            s.destroy();
+        })
+    }
+
+    update() {
+        this.a += Math.PI / 600;
+        this.coins.forEach(
+            (c, i) => {
+                let cosa = Math.cos(this.a + i * Math.PI / 2);
+                let sina = Math.sin(this.a + i * Math.PI / 2);
+                c.p.x = cosa * this.r / 3 + this.p.x;
+                c.p.y = sina * this.r / 3 + this.p.y;
+            }
+        );
+        this.spikes.forEach(
+            (s, i) => {
+                let cosa = Math.cos(this.a + i * Math.PI / 2);
+                let sina = Math.sin(this.a + i * Math.PI / 2);
+                s.p.x = cosa * this.r + this.p.x;
+                s.p.y = sina * this.r + this.p.y;
+            }
+        );
+    }
+}
+
 class Coin extends Disc {
     constructor(e, r, h) {
         super(e, r, h, "#e0ce19");
@@ -420,6 +484,11 @@ window.addEventListener("load", () => {
     let b = new Blob(eng);
     b.instantiate();
     eng.blob = b;
+
+    let shell = new Shell(eng, 200);
+    shell.p.x = 400;
+    shell.p.y = 400;
+    shell.instantiate();
 
     for (let i = 0; i < 100; i++) {
         let s = new Stone(eng, 10 + 50 * Math.random(), 5 + 10 * Math.random());
