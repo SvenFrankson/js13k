@@ -246,15 +246,15 @@ class Blob extends GameObject {
                 fAoBX /= dA;
                 fAoBY /= dA;
     
-                this.vBod.x += fAoBX * dA * this.springK * 10 / 60 / this.mBod;
-                this.vBod.y += fAoBY * dA * this.springK * 10 / 60 / this.mBod;
+                this.vBod.x += fAoBX * dA * this.springK * 4 / 60 / this.mBod;
+                this.vBod.y += fAoBY * dA * this.springK * 4 / 60 / this.mBod;
             }
         }
 
-        this.vNuc.x *= 0.99 * this.nucTemp;
-        this.vNuc.y *= 0.99 * this.nucTemp;
-        this.vBod.x *= 0.99;
-        this.vBod.y *= 0.99;
+        this.vNuc.x *= 0.995 * this.nucTemp;
+        this.vNuc.y *= 0.995 * this.nucTemp;
+        this.vBod.x *= 0.995;
+        this.vBod.y *= 0.995;
 
         this.pNuc.x += this.vNuc.x / 60;
         this.pNuc.y += this.vNuc.y / 60;
@@ -326,8 +326,6 @@ window.addEventListener("load", () => {
             b.nucFreezing = true;
             b.pAnchor.x = e.clientX - 9 + eng.cX - eng.width * 0.5;
             b.pAnchor.y = e.clientY - 9 + eng.cY - eng.height * 0.5;
-            console.log(e.clientX + " " + e.clientY);
-            console.log(b.pAnchor.x + " " + b.pAnchor.y);
         }
     });
     eng.canvas.addEventListener("pointermove", (e) => {
@@ -336,8 +334,6 @@ window.addEventListener("load", () => {
         }
         b.pAnchor.x = e.clientX - 9 + eng.cX - eng.width * 0.5;   
         b.pAnchor.y = e.clientY - 9 + eng.cY - eng.height * 0.5;
-        console.log(e.clientX + " " + e.clientY);
-        console.log(b.pAnchor.x + " " + b.pAnchor.y);
     });
     eng.canvas.addEventListener("pointerup", (e) => {
         b.nucFreezing = false;
