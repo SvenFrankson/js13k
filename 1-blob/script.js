@@ -50,7 +50,15 @@ class Engine {
 
     update() {
         this.updateTiles();
+        this.gameObjects.forEach(
+            go => {
+                if (go.update) {
+                    go.update();
+                }
+            }
+        )
         if (this.blob) {
+            this.blob.update();
             if (!this.blob.nucFreezing) {
                 let newCX = (this.blob.pNuc.x + this.blob.pBod.x) * 0.5;
                 let newCY = (this.blob.pNuc.y + this.blob.pBod.y) * 0.5;
@@ -72,13 +80,6 @@ class Engine {
                 this.cY += dY;
             }
         }
-        this.gameObjects.forEach(
-            go => {
-                if (go.update) {
-                    go.update();
-                }
-            }
-        )
     }
 
     updateTiles() {
@@ -139,6 +140,9 @@ class Engine {
                 }
             }
         )
+        if (this.blob) {
+            this.blob.draw();
+        }
     }
 }
 
@@ -422,13 +426,13 @@ class Stone extends Disc {
     }
 }
 
-class Blob extends GameObject {
+class Blob {
 
     constructor(e) {
-        super(e);
+        this.engine = e;
         this.hp = 3;
-        this.springK = 4;
-        this.mBod = 2;
+        this.springK = 6;
+        this.mBod = 3;
         this.mNuc = 1;
         this.nucFreezing = false;
         this.nucTemp = 1;
@@ -437,7 +441,6 @@ class Blob extends GameObject {
         this.pBod = { x: -50, y: 20 };
         this.vBod = { x: 0, y: 0 };
         this.pAnchor = { x: 0, y: 0};
-        // 87 12 74 91
     }
 
     draw() {
@@ -445,8 +448,8 @@ class Blob extends GameObject {
         let oX = this.engine.width * 0.5 - this.engine.cX;
         let oY = this.engine.height * 0.5 - this.engine.cY;
 
-        let rN = 15;
-        let rB = 20;
+        let rN = 20;
+        let rB = 30;
 
         let dX = this.pBod.x - this.pNuc.x;
         let dY = this.pBod.y - this.pNuc.y;
@@ -454,7 +457,7 @@ class Blob extends GameObject {
         dX /= d;
         dY /= d;
 
-        rB -= d / 15;
+        rB -= d / 10;
         rB = Math.max(rB, rN);
 
         let c = scaleColor("#58bf21", this.hp / 3);
@@ -541,41 +544,43 @@ class Blob extends GameObject {
                 fAoBX /= dA;
                 fAoBY /= dA;
     
-                this.vBod.x += fAoBX * dA * this.springK * 20 / 60 / this.mBod;
-                this.vBod.y += fAoBY * dA * this.springK * 20 / 60 / this.mBod;
+                this.vBod.x += fAoBX * dA * this.springK * 30 / 60 / this.mBod;
+                this.vBod.y += fAoBY * dA * this.springK * 30 / 60 / this.mBod;
             }
         }
 
-        this.vNuc.x *= 0.992 * this.nucTemp;
-        this.vNuc.y *= 0.992 * this.nucTemp;
-        this.vBod.x *= 0.992;
-        this.vBod.y *= 0.992;
+        this.vNuc.x *= 0.99 * this.nucTemp;
+        this.vNuc.y *= 0.99 * this.nucTemp;
+        this.vBod.x *= 0.9925;
+        this.vBod.y *= 0.9925;
 
         for (let i = 0; i < this.engine.gameObjects.length; i++) {
             let go = this.engine.gameObjects[i];
             if (go.collide) {
-                let bCollide = go.collide(this.pBod.x, this.pBod.y, 20);
+                let bCollide = go.collide(this.pBod.x, this.pBod.y, 30);
                 if (bCollide) {
                     if (go.type === "stone") {
-                        let nB = go.collisionNormal(this.pBod.x, this.pBod.y, 20);
+                        let nB = go.collisionNormal(this.pBod.x, this.pBod.y, 30);
                         let dn = this.vBod.x * nB.x + this.vBod.y * nB.y;
-                        this.pBod.x = go.p.x + nB.x * (20 + go.r + 1);
-                        this.pBod.y = go.p.y + nB.y * (20 + go.r + 1);
+                        this.pBod.x = go.p.x + nB.x * (30 + go.r + 1);
+                        this.pBod.y = go.p.y + nB.y * (30 + go.r + 1);
                         this.vBod.x -= 2 * dn * nB.x;
                         this.vBod.y -= 2 * dn * nB.y;
                     }
                     else if (go.type === "spike") {
                         this.hp = Math.max(this.hp - 1, 0);
                         go.destroy();
+                        console.log("Hit by " + go.p.x + " " + go.p.y);
+                        console.log(go);
                     }
                 }
-                let nCollide = go.collide(this.pNuc.x, this.pNuc.y, 15);
+                let nCollide = go.collide(this.pNuc.x, this.pNuc.y, 20);
                 if (nCollide) {
                     if (go.type === "stone") {
-                        let nN = go.collisionNormal(this.pNuc.x, this.pNuc.y, 15);
+                        let nN = go.collisionNormal(this.pNuc.x, this.pNuc.y, 20);
                         let dn = this.vNuc.x * nN.x + this.vNuc.y * nN.y;
-                        this.pNuc.x = go.p.x + nN.x * (15 + go.r + 1);
-                        this.pNuc.y = go.p.y + nN.y * (15 + go.r + 1);
+                        this.pNuc.x = go.p.x + nN.x * (20 + go.r + 1);
+                        this.pNuc.y = go.p.y + nN.y * (20 + go.r + 1);
                         this.vNuc.x -= 2 * dn * nN.x;
                         this.vNuc.y -= 2 * dn * nN.y;
                     }
@@ -586,6 +591,8 @@ class Blob extends GameObject {
                     else if (go.type === "spike") {
                         this.hp = Math.max(this.hp - 1, 0);
                         go.destroy();
+                        console.log("Hit by " + go.p.x + " " + go.p.y);
+                        console.log(go);
                     }
                 }
             }
@@ -596,49 +603,12 @@ class Blob extends GameObject {
 
         this.pBod.x += this.vBod.x / 60;
         this.pBod.y += this.vBod.y / 60;
-
-        /*
-        if (this.pNuc.x < - 200) {
-            this.pNuc.x = - 200;
-            this.vNuc.x *= -1;
-        }
-        if (this.pNuc.y < - 200) {
-            this.pNuc.y = - 200;
-            this.vNuc.y *= -1;
-        }
-        if (this.pNuc.x > 200) {
-            this.pNuc.x = 200;
-            this.vNuc.x *= -1;
-        }
-        if (this.pNuc.y > 200) {
-            this.pNuc.y = 200;
-            this.vNuc.y *= -1;
-        }
-
-        if (this.pBod.x < - 200) {
-            this.pBod.x = - 200;
-            this.vBod.x *= -1;
-        }
-        if (this.pBod.y < - 200) {
-            this.pBod.y = - 200;
-            this.vBod.y *= -1;
-        }
-        if (this.pBod.x > 200) {
-            this.pBod.x = 200;
-            this.vBod.x *= -1;
-        }
-        if (this.pBod.y > 200) {
-            this.pBod.y = 200;
-            this.vBod.y *= -1;
-        }
-        */
     }
 }
 
 window.addEventListener("load", () => {
     let eng = new Engine(700, 700);
     let b = new Blob(eng);
-    b.instantiate();
     eng.blob = b;
     let loop = () => {
         eng.update();
