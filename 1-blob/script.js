@@ -12,6 +12,16 @@ var mc = Math.cos;
 var ms = Math.sin;
 var sc = 0;
 
+/*
+Coral
+#f8a2a8
+Seafoam Green
+#b5eecb
+Purple Haze
+#9589a9
+Cool Gray
+#475250
+*/
 class Engine {
     constructor(w, h) {
         this.cX = 0;
@@ -24,13 +34,14 @@ class Engine {
         this.canvas.height = this.height;
         this.context = this.canvas.getContext("2d");
         this.gameObjects = [];
+        this.texts = [];
         this.tiles = [];
 
         let bgC = document.createElement("canvas");
         bgC.width = 2 * w;
         bgC.height = 2 * h;
         let bgCtx = bgC.getContext("2d");
-        bgCtx.fillStyle = "#000000";
+        bgCtx.fillStyle = "#475250";
         bgCtx.fillRect(0, 0, 2 * w, 2 * h);
         for (let i = 0; i < 20; i++) {
             bgCtx.lineWidth = 1;
@@ -41,7 +52,7 @@ class Engine {
                 for (let jj = -1; jj <= 1; jj++) {
                     bgCtx.beginPath();
                     bgCtx.arc(ii * 2 * w + x, jj * 2 * h + y, r, 0, 2 * Math.PI);
-                    bgCtx.strokeStyle = "#a1a6b4";
+                    bgCtx.strokeStyle = "#556663";
                     bgCtx.stroke();
                 }
             }
@@ -171,6 +182,13 @@ class Engine {
         if (this.blob) {
             this.blob.draw();
         }
+        this.texts.forEach(
+            t => {
+                if (t.draw) {
+                    t.draw();
+                }
+            }
+        )
     }
 }
 
@@ -246,6 +264,49 @@ class GameObject {
         let i = this.engine.gameObjects.indexOf(this);
         if (i !== -1) {
             this.engine.gameObjects.splice(i, 1);
+        }
+    }
+}
+
+class FloatingText {
+    constructor(e, t) {
+        this.engine = e;
+        this.t = t;
+        this.s = 1;
+        this.k = 0;
+        this.p = { x: 0, y: 0};
+        this.dx = Math.random() * 2 - 1;
+        this.dy = Math.random() * 2;
+    }
+
+    instantiate() {
+        this.engine.texts.push(this);
+    }
+
+    destroy() {
+        let i = this.engine.texts.indexOf(this);
+        if (i !== -1) {
+            this.engine.texts.splice(i, 1);
+        }
+    }
+
+    draw() {
+        this.k++;
+        this.s = Math.sin(this.k / 60 * Math.PI) * 20;
+        let ctx = this.engine.context;
+        let oX = this.engine.width * 0.5 - this.engine.cX;
+        let oY = this.engine.height * 0.5 - this.engine.cY;
+
+        let x = oX + this.p.x + this.k * this.dx;
+        let y = oY + this.p.y - 2 * this.k * this.dy;
+
+        ctx.font = this.s.toFixed(0) + "px Arial";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "white";
+        ctx.fillText(this.t, x, y);
+
+        if (this.k > 60) {
+            this.destroy();
         }
     }
 }
@@ -440,7 +501,7 @@ var coins = [];
 class Coin extends Disc {
     
     constructor(e, r, h) {
-        super(e, r, h, "#e0ce19");
+        super(e, r, h, "#b5eecb");
         this.type = "coin";
     }
 
@@ -460,7 +521,7 @@ class Coin extends Disc {
 
 class Spike extends Disc {
     constructor(e, r, h) {
-        super(e, r, h, "#e01941");
+        super(e, r, h, "#f8a2a8");
         this.type = "spike";
     }
 
@@ -488,8 +549,48 @@ class Spike extends Disc {
 
 class Stone extends Disc {
     constructor(e, r, h) {
-        super(e, r, h, "#d1d6e4");
+        super(e, r, h, "#9589a9");
         this.type = "stone";
+        this.bump = 0;
+        this.bumping = false;
+    }
+
+    draw() {
+        if (this.bumping) {
+            this.bump += 1 + this.s * 0.5;
+            this.bumping = this.bump < 3 * this.size;
+        }
+        else {
+            this.bump = Math.max(this.bump - 0.5, 0);
+        }
+        let ctx = this.engine.context;
+        ctx.lineWidth = 2;
+        let oX = this.engine.width * 0.5 - this.engine.cX;
+        let oY = this.engine.height * 0.5 - this.engine.cY;
+
+        let x = oX + this.p.x;
+        let y = oY + this.p.y;
+
+        if (x > - 20 - this.r) {
+            if (y > - 20 - this.r) {
+                if (x < this.engine.width + 20 + this.r) {
+                    if (y < this.engine.height + 20 + this.r) {
+                        let dx = this.h - 2 * this.h * x / this.engine.width;
+                        let dy = this.h - 2 * this.h * y / this.engine.height;
+                        
+                        ctx.beginPath();
+                        ctx.arc(x + dx, y + dy, this.r + this.bump, 0, 2 * Math.PI);
+                        ctx.strokeStyle = this.colorShadow;
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.arc(x, y, this.r + this.bump, 0, 2 * Math.PI);
+                        ctx.strokeStyle = this.color;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -529,7 +630,7 @@ class Blob {
         rB -= d / 10;
         rB = Math.max(rB, rN);
 
-        let c = scaleColor("#58bf21", this.hp / this.hpM);
+        let c = scaleColor("#b5eecb", this.hp / this.hpM);
 
         ctx.beginPath();
         ctx.arc(oX + this.pBod.x, oY + this.pBod.y, rB + 2, 0, 2 * Math.PI);
@@ -542,7 +643,6 @@ class Blob {
             let r = rN * dd + rN * 0.5 * (1 - dd);
             ctx.beginPath();
             ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r + 2, 0, 2 * Math.PI);
-            ctx.fillStyle = c;
             ctx.fill();
         }
 
@@ -552,18 +652,16 @@ class Blob {
             let r = rN * 0.5 * (1 - dd) + rB * dd;
             ctx.beginPath();
             ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r + 2, 0, 2 * Math.PI);
-            ctx.fillStyle = c;
             ctx.fill();
         }
 
         ctx.beginPath();
         ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN + 2, 0, 2 * Math.PI);
-        ctx.fillStyle = c;
         ctx.fill();
 
+        ctx.fillStyle = "#475250";
         ctx.beginPath();
         ctx.arc(oX + this.pBod.x, oY + this.pBod.y, rB, 0, 2 * Math.PI);
-        ctx.fillStyle = "#000000";
         ctx.fill();
 
         for (let i = 0; i < d * 0.5; i += 2) {
@@ -572,7 +670,6 @@ class Blob {
             let r = rN * dd + rN * 0.5 * (1 - dd);
             ctx.beginPath();
             ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
-            ctx.fillStyle = "#000000";
             ctx.fill();
         }
 
@@ -582,13 +679,11 @@ class Blob {
             let r = rN * 0.5 * (1 - dd) + rB * dd;
             ctx.beginPath();
             ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
-            ctx.fillStyle = "#000000";
             ctx.fill();
         }
 
         ctx.beginPath();
         ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN, 0, 2 * Math.PI);
-        ctx.fillStyle = "#000000";
         ctx.fill();
 
         if (this.nucFreezing) {
@@ -687,6 +782,11 @@ class Blob {
                         this.pBod.y = go.p.y + nB.y * (30 + go.r + 1);
                         this.vBod.x -= 2 * dn * nB.x;
                         this.vBod.y -= 2 * dn * nB.y;
+                        go.bumping = true;
+                        let t = new FloatingText(this.engine, "BUMP !");
+                        t.p.x = this.pBod.x;
+                        t.p.y = this.pBod.y;
+                        t.instantiate();
                     }
                     else if (go.type === "spike") {
                         this.hp = Math.max(this.hp - go.s * 2, 0);
@@ -703,9 +803,18 @@ class Blob {
                         this.pNuc.y = go.p.y + nN.y * (20 + go.r + 1);
                         this.vNuc.x -= 2 * dn * nN.x;
                         this.vNuc.y -= 2 * dn * nN.y;
+                        go.bumping = true;
+                        let t = new FloatingText(this.engine, "BUMP !");
+                        t.p.x = this.pNuc.x;
+                        t.p.y = this.pNuc.y;
+                        t.instantiate();
                     }
                     else if (go.type === "coin") {
                         sc += go.s * this.combo;
+                        let t = new FloatingText(this.engine, "+ " + (go.s * this.combo).toFixed(0));
+                        t.p.x = this.pBod.x;
+                        t.p.y = this.pBod.y;
+                        t.instantiate();
                         this.hp = Math.min(this.hp + go.s, this.hpM);
                         go.destroy();
                         this.combo += 1;
