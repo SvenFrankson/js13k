@@ -30,10 +30,10 @@ class Engine {
         bgC.width = 2 * w;
         bgC.height = 2 * h;
         let bgCtx = bgC.getContext("2d");
-        bgCtx.fillStyle = "#e1f0f4";
+        bgCtx.fillStyle = "#000000";
         bgCtx.fillRect(0, 0, 2 * w, 2 * h);
-        for (let i = 0; i < 10; i++) {
-            bgCtx.lineWidth = 10 + mr() * 10;
+        for (let i = 0; i < 20; i++) {
+            bgCtx.lineWidth = 1;
             let x = mr() * 2 * w;
             let y = mr() * 2 * h;
             let r = mr() * 200 + 50;
@@ -41,12 +41,38 @@ class Engine {
                 for (let jj = -1; jj <= 1; jj++) {
                     bgCtx.beginPath();
                     bgCtx.arc(ii * 2 * w + x, jj * 2 * h + y, r, 0, 2 * Math.PI);
-                    bgCtx.strokeStyle = "#b1b6c4";
+                    bgCtx.strokeStyle = "#a1a6b4";
                     bgCtx.stroke();
                 }
             }
         }
         this.bgData = bgCtx.getImageData(0, 0, 2 * w, 2 * h);
+
+        this.s10C = document.createElement("canvas");
+        this.s10C.width = 30;
+        this.s10C.height = 30;
+        let s10Ctx = this.s10C.getContext("2d");
+        s10Ctx.fillStyle = "red";
+        s10Ctx.beginPath();
+        s10Ctx.arc(15, 15, 10, 0, 2 * Math.PI);
+        s10Ctx.fill();
+        let sCount = 6 + mf(3 * mr());
+        for (let i = 0; i < sCount; i++) {
+            let a = i * 2 * Math.PI / sCount + mr() * Math.PI / 12;
+            let cosam = Math.cos(a - Math.PI / 8);
+            let sinam = Math.sin(a - Math.PI / 8);
+            let cosa = Math.cos(a);
+            let sina = Math.sin(a);
+            let cosap = Math.cos(a + Math.PI / 8);
+            let sinap = Math.sin(a + Math.PI / 8);
+            s10Ctx.beginPath();
+            s10Ctx.moveTo(cosam * 10 + 15, sinam * 10 + 15);
+            s10Ctx.lineTo(cosa * 15 + 15, sina * 15 + 15);
+            s10Ctx.lineTo(cosap * 10 + 15, sinap * 10 + 15);
+            s10Ctx.lineTo(cosam * 10 + 15, sinam * 10 + 15);
+            s10Ctx.fillStyle = "red";
+            s10Ctx.fill();
+        }
     }
 
     update() {
@@ -239,6 +265,7 @@ class Disc extends GameObject {
 
     draw() {
         let ctx = this.engine.context;
+        ctx.lineWidth = 2;
         let oX = this.engine.width * 0.5 - this.engine.cX;
         let oY = this.engine.height * 0.5 - this.engine.cY;
 
@@ -254,13 +281,13 @@ class Disc extends GameObject {
                         
                         ctx.beginPath();
                         ctx.arc(x + dx, y + dy, this.r, 0, 2 * Math.PI);
-                        ctx.fillStyle = this.colorShadow;
-                        ctx.fill();
+                        ctx.strokeStyle = this.colorShadow;
+                        ctx.stroke();
                         
                         ctx.beginPath();
                         ctx.arc(x, y, this.r, 0, 2 * Math.PI);
-                        ctx.fillStyle = this.color;
-                        ctx.fill();
+                        ctx.strokeStyle = this.color;
+                        ctx.stroke();
                     }
                 }
             }
@@ -436,6 +463,27 @@ class Spike extends Disc {
         super(e, r, h, "#e01941");
         this.type = "spike";
     }
+
+    /*
+    draw() {
+        let ctx = this.engine.context;
+        let oX = this.engine.width * 0.5 - this.engine.cX;
+        let oY = this.engine.height * 0.5 - this.engine.cY;
+
+        let x = oX + this.p.x;
+        let y = oY + this.p.y;
+
+        if (x > - 20 - this.r) {
+            if (y > - 20 - this.r) {
+                if (x < this.engine.width + 20 + this.r) {
+                    if (y < this.engine.height + 20 + this.r) {
+                        ctx.drawImage(this.engine.s10C, x - 15, y - 15);
+                    }
+                }
+            }
+        }
+    }
+    */
 }
 
 class Stone extends Disc {
@@ -482,10 +530,9 @@ class Blob {
         rB = Math.max(rB, rN);
 
         let c = scaleColor("#58bf21", this.hp / this.hpM);
-        let cN = scaleColor(c, 0.5);
 
         ctx.beginPath();
-        ctx.arc(oX + this.pBod.x, oY + this.pBod.y, rB, 0, 2 * Math.PI);
+        ctx.arc(oX + this.pBod.x, oY + this.pBod.y, rB + 2, 0, 2 * Math.PI);
         ctx.fillStyle = c;
         ctx.fill();
 
@@ -494,7 +541,7 @@ class Blob {
             dd = dd * dd;
             let r = rN * dd + rN * 0.5 * (1 - dd);
             ctx.beginPath();
-            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
+            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r + 2, 0, 2 * Math.PI);
             ctx.fillStyle = c;
             ctx.fill();
         }
@@ -504,19 +551,44 @@ class Blob {
             dd = Math.pow(dd, 1.5);
             let r = rN * 0.5 * (1 - dd) + rB * dd;
             ctx.beginPath();
-            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
+            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r + 2, 0, 2 * Math.PI);
             ctx.fillStyle = c;
             ctx.fill();
         }
 
         ctx.beginPath();
-        ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN, 0, 2 * Math.PI);
+        ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN + 2, 0, 2 * Math.PI);
         ctx.fillStyle = c;
         ctx.fill();
 
         ctx.beginPath();
-        ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN * 0.6 * this.nucTemp, 0, 2 * Math.PI);
-        ctx.fillStyle = cN;
+        ctx.arc(oX + this.pBod.x, oY + this.pBod.y, rB, 0, 2 * Math.PI);
+        ctx.fillStyle = "#000000";
+        ctx.fill();
+
+        for (let i = 0; i < d * 0.5; i += 2) {
+            let dd = 1 - i / (0.5 * d);
+            dd = dd * dd;
+            let r = rN * dd + rN * 0.5 * (1 - dd);
+            ctx.beginPath();
+            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
+            ctx.fillStyle = "#000000";
+            ctx.fill();
+        }
+
+        for (let i = d * 0.5; i < d; i += 2) {
+            let dd = (i - 0.5 * d) / (0.5 * d);
+            dd = Math.pow(dd, 1.5);
+            let r = rN * 0.5 * (1 - dd) + rB * dd;
+            ctx.beginPath();
+            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
+            ctx.fillStyle = "#000000";
+            ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN, 0, 2 * Math.PI);
+        ctx.fillStyle = "#000000";
         ctx.fill();
 
         if (this.nucFreezing) {
@@ -577,7 +649,7 @@ class Blob {
             if (d > 0) {
                 fCoNX /= d;
                 fCoNY /= d;
-                let g = (100 / (d / 50) / (d / 50));
+                let g = (100 / (d / 100) / (d / 100));
                 fCoNX *= g / 60 / this.mNuc;
                 fCoNY *= g / 60 / this.mNuc;
                 this.vNuc.x += fCoNX;
