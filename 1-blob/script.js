@@ -10,6 +10,7 @@ var mf = Math.floor;
 var mr = Math.random;
 var mc = Math.cos;
 var ms = Math.sin;
+var sc = 0;
 
 class Engine {
     constructor(w, h) {
@@ -80,6 +81,7 @@ class Engine {
                 this.cY += dY;
             }
         }
+        document.getElementById("score").innerText = sc;
     }
 
     updateTiles() {
@@ -157,40 +159,41 @@ class Tile {
     }
     
     instantiate() {
-        for (let i = 0; i < 25; i++) {
-            let s = new Stone(this.e, 10 + 50 * mr(), 5 + 10 * mr());
+        for (let i = 0; i < 20; i++) {
+            let s = new Stone(this.e, 2 + mf(5 * mr()), 5 + 10 * mr());
             s.p.x = this.x + mr() * 2000;
             s.p.y = this.y + mr() * 2000;
             this.gos.push(s);
         }
 
         for (let i = 0; i < 10; i++) {
-            let s = new Spike(this.e, 5 + 10 * mr(), 2 + 5 * mr());
+            let s = new Spike(this.e, 1 + mf(3 * mr()), 2 + 5 * mr());
             s.p.x = this.x + mr() * 2000;
             s.p.y = this.y + mr() * 2000;
             this.gos.push(s);
         }
 
-        for (let i = 0; i < 20; i++) {
-            let c = new Coin(this.e, 5 + 10 * mr(), 2 + 5 * mr());
+        for (let i = 0; i < 15; i++) {
+            let c = new Coin(this.e, 1 + mf(3 * mr()), 2 + 5 * mr());
             c.p.x = this.x + mr() * 2000;
             c.p.y = this.y + mr() * 2000;
             this.gos.push(c);
         }
         
-        let r = Math.random();
-        let st;
-        if (r < 0.5) {
-            st = new Tunnel(this.e, 200);
-            st.p.x = this.x + 1000;
-            st.p.y = this.y + 1000;
+        for (let i = 0; i < 5; i++) {
+            let r = Math.random();
+            let st;
+            if (r < 0.5) {
+                st = new Tunnel(this.e, 300);
+            }
+            else if (r < 1) {
+                st = new Shell(this.e, 200);
+            }
+            st.p.x = this.x + mr() * 2000;
+            st.p.y = this.y + mr() * 2000;
+            st.dir = mr() * Math.PI * 2;
+            this.gos.push(st);
         }
-        else if (r < 1) {
-            st = new Shell(this.e, 200);
-            st.p.x = this.x + 1000;
-            st.p.y = this.y + 1000;
-        }
-        this.gos.push(st);
 
         this.gos.forEach(g => {
             g.instantiate();
@@ -223,10 +226,11 @@ class GameObject {
 
 class Disc extends GameObject {
 
-    constructor(e, r, h, color) {
+    constructor(e, s, h, color) {
         super(e);
         this.type = "disc";
-        this.r = r;
+        this.s = s;
+        this.r = s * 10;
         this.h = h;
         this.p = { x: 0, y: 0};
         this.color = color;
@@ -255,9 +259,8 @@ class Disc extends GameObject {
                         
                         ctx.beginPath();
                         ctx.arc(x, y, this.r, 0, 2 * Math.PI);
-                        ctx.fillStyle = this.iscC ? "blue" : this.color;
+                        ctx.fillStyle = this.color;
                         ctx.fill();
-                        this.iscC = false;
                     }
                 }
             }
@@ -333,16 +336,16 @@ class Tunnel extends Structure {
     constructor(e, r) {
         super(e, r);
         this.coins = [
-            new Coin(e, 20, 5),
-            new Coin(e, 20, 5),
-            new Coin(e, 20, 5),
-            new Coin(e, 20, 5)
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5)
         ];
         this.spikes = [
-            new Spike(e, 10, 5),
-            new Spike(e, 10, 5),
-            new Spike(e, 10, 5),
-            new Spike(e, 10, 5)
+            new Spike(e, 1, 5),
+            new Spike(e, 1, 5),
+            new Spike(e, 1, 5),
+            new Spike(e, 1, 5)
         ];
     }
 
@@ -372,16 +375,16 @@ class Shell extends Structure {
     constructor(e, r) {
         super(e, r);
         this.coins = [
-            new Coin(e, 20, 5),
-            new Coin(e, 20, 5),
-            new Coin(e, 20, 5),
-            new Coin(e, 20, 5)
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5)
         ];
         this.spikes = [
-            new Spike(e, 10, 5),
-            new Spike(e, 10, 5),
-            new Spike(e, 10, 5),
-            new Spike(e, 10, 5)
+            new Spike(e, 1, 5),
+            new Spike(e, 1, 5),
+            new Spike(e, 1, 5),
+            new Spike(e, 1, 5)
         ];
     }
 
@@ -446,7 +449,9 @@ class Blob {
 
     constructor(e) {
         this.engine = e;
-        this.hp = 3;
+        this.combo = 1;
+        this.hpM = 20;
+        this.hp = this.hpM;
         this.springK = 6;
         this.mBod = 3;
         this.mNuc = 1;
@@ -476,7 +481,7 @@ class Blob {
         rB -= d / 10;
         rB = Math.max(rB, rN);
 
-        let c = scaleColor("#58bf21", this.hp / 3);
+        let c = scaleColor("#58bf21", this.hp / this.hpM);
         let cN = scaleColor(c, 0.5);
 
         ctx.beginPath();
@@ -566,14 +571,13 @@ class Blob {
 
         let cC = coins[0];
         if (cC) {
-            cC.iscC = true;
             let fCoNX = cC.p.x - this.pNuc.x;
             let fCoNY = cC.p.y - this.pNuc.y;
             let d = Math.sqrt(fCoNX * fCoNX + fCoNY * fCoNY);
             if (d > 0) {
                 fCoNX /= d;
                 fCoNY /= d;
-                let g = (100 / (d / 100) / (d / 100));
+                let g = (100 / (d / 50) / (d / 50));
                 fCoNX *= g / 60 / this.mNuc;
                 fCoNY *= g / 60 / this.mNuc;
                 this.vNuc.x += fCoNX;
@@ -589,15 +593,15 @@ class Blob {
                 fAoBX /= dA;
                 fAoBY /= dA;
     
-                this.vBod.x += fAoBX * dA * this.springK * 30 / 60 / this.mBod;
-                this.vBod.y += fAoBY * dA * this.springK * 30 / 60 / this.mBod;
+                this.vBod.x += fAoBX * dA * this.springK * 100 / 60 / this.mBod;
+                this.vBod.y += fAoBY * dA * this.springK * 100 / 60 / this.mBod;
             }
         }
 
         this.vNuc.x *= 0.99 * this.nucTemp;
         this.vNuc.y *= 0.99 * this.nucTemp;
-        this.vBod.x *= 0.9925;
-        this.vBod.y *= 0.9925;
+        this.vBod.x *= 0.9925 * (0.8 + (this.nucFreezing ? 0 : 0.2));
+        this.vBod.y *= 0.9925 * (0.8 + (this.nucFreezing ? 0 : 0.2));
 
         for (let i = 0; i < this.engine.gameObjects.length; i++) {
             let go = this.engine.gameObjects[i];
@@ -613,10 +617,9 @@ class Blob {
                         this.vBod.y -= 2 * dn * nB.y;
                     }
                     else if (go.type === "spike") {
-                        this.hp = Math.max(this.hp - 1, 0);
+                        this.hp = Math.max(this.hp - go.s * 2, 0);
                         go.destroy();
-                        console.log("Hit by " + go.p.x + " " + go.p.y);
-                        console.log(go);
+                        this.combo = 1;
                     }
                 }
                 let nCollide = go.collide(this.pNuc.x, this.pNuc.y, 20);
@@ -630,14 +633,15 @@ class Blob {
                         this.vNuc.y -= 2 * dn * nN.y;
                     }
                     else if (go.type === "coin") {
-                        this.hp = Math.min(this.hp + 1, 3);
+                        sc += go.s * this.combo;
+                        this.hp = Math.min(this.hp + go.s, this.hpM);
                         go.destroy();
+                        this.combo += 1;
                     }
                     else if (go.type === "spike") {
-                        this.hp = Math.max(this.hp - 1, 0);
+                        this.hp = Math.max(this.hp - go.s * 2, 0);
                         go.destroy();
-                        console.log("Hit by " + go.p.x + " " + go.p.y);
-                        console.log(go);
+                        this.combo = 1;
                     }
                 }
             }
@@ -663,6 +667,7 @@ window.addEventListener("load", () => {
     loop();
     eng.canvas.addEventListener("pointerdown", (e) => {
         if (b.nucTemp === 1) {
+            b.combo = 1;
             b.nucFreezing = true;
             b.pAnchor.x = e.clientX - 9 + eng.cX - eng.width * 0.5;
             b.pAnchor.y = e.clientY - 9 + eng.cY - eng.height * 0.5;
@@ -676,6 +681,9 @@ window.addEventListener("load", () => {
         b.pAnchor.y = e.clientY - 9 + eng.cY - eng.height * 0.5;
     });
     eng.canvas.addEventListener("pointerup", (e) => {
+        if (!b.nucFreezing) {
+            return;
+        }
         b.nucFreezing = false;
         b.nucTemp = 0;
     });
