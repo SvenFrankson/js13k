@@ -255,8 +255,9 @@ class Disc extends GameObject {
                         
                         ctx.beginPath();
                         ctx.arc(x, y, this.r, 0, 2 * Math.PI);
-                        ctx.fillStyle = this.color;
+                        ctx.fillStyle = this.iscC ? "blue" : this.color;
                         ctx.fill();
+                        this.iscC = false;
                     }
                 }
             }
@@ -405,10 +406,25 @@ class Shell extends Structure {
     }
 }
 
+var coins = [];
 class Coin extends Disc {
+    
     constructor(e, r, h) {
         super(e, r, h, "#e0ce19");
         this.type = "coin";
+    }
+
+    instantiate() {
+        super.instantiate();
+        coins.push(this);
+    }
+
+    destroy() {
+        super.destroy();
+        let i = coins.indexOf(this);
+        if (i !== -1) {
+            coins.splice(i, 1);
+        }
     }
 }
 
@@ -534,6 +550,35 @@ class Blob {
 
             this.vBod.x += fNoBX * d * this.springK / 60 / this.mBod;
             this.vBod.y += fNoBY * d * this.springK / 60 / this.mBod;
+        }
+
+        coins = coins.sort((c1, c2) => { 
+            let dx1 = (c1.p.x - this.pNuc.x);
+            dx1 *= dx1;
+            let dy1 = (c1.p.y - this.pNuc.y);
+            dy1 *= dy1;
+            let dx2 = (c2.p.x - this.pNuc.x);
+            dx2 *= dx2;
+            let dy2 = (c2.p.y - this.pNuc.y);
+            dy2 *= dy2;
+            return (dx1 + dy1) - (dx2 + dy2);
+        })
+
+        let cC = coins[0];
+        if (cC) {
+            cC.iscC = true;
+            let fCoNX = cC.p.x - this.pNuc.x;
+            let fCoNY = cC.p.y - this.pNuc.y;
+            let d = Math.sqrt(fCoNX * fCoNX + fCoNY * fCoNY);
+            if (d > 0) {
+                fCoNX /= d;
+                fCoNY /= d;
+                let g = (100 / (d / 100) / (d / 100));
+                fCoNX *= g / 60 / this.mNuc;
+                fCoNY *= g / 60 / this.mNuc;
+                this.vNuc.x += fCoNX;
+                this.vNuc.y += fCoNY;
+            }
         }
 
         if (this.nucFreezing) {
