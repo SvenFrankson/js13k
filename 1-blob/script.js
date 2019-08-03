@@ -1,10 +1,15 @@
 function scaleColor(hexColor, s) {
     let o = hexColor.length === 7 ? 1 : 0;
-    let r = Math.floor(parseInt(hexColor.substring(o, o + 2), 16) * s);
-    let g = Math.floor(parseInt(hexColor.substring(o + 2, o + 4), 16) * s);
-    let b = Math.floor(parseInt(hexColor.substring(o + 4, o + 6), 16) * s);
+    let r = mf(parseInt(hexColor.substring(o, o + 2), 16) * s);
+    let g = mf(parseInt(hexColor.substring(o + 2, o + 4), 16) * s);
+    let b = mf(parseInt(hexColor.substring(o + 4, o + 6), 16) * s);
     return (o === 1 ? "#" : "") + r.toString(16).padStart(2, "0") + g.toString(16).padStart(2, "0") + b.toString(16).padStart(2, "0");
 }
+
+var mf = Math.floor;
+var mr = Math.random;
+var mc = Math.cos;
+var ms = Math.sin;
 
 class Engine {
     constructor(w, h) {
@@ -18,31 +23,33 @@ class Engine {
         this.canvas.height = this.height;
         this.context = this.canvas.getContext("2d");
         this.gameObjects = [];
+        this.tiles = [];
 
-        let backgroundCanvas = document.createElement("canvas");
-        backgroundCanvas.width = 2 * w;
-        backgroundCanvas.height = 2 * h;
-        let backgroundContext = backgroundCanvas.getContext("2d");
-        backgroundContext.fillStyle = "#e1f0f4";
-        backgroundContext.fillRect(0, 0, 2 * w, 2 * h);
+        let bgC = document.createElement("canvas");
+        bgC.width = 2 * w;
+        bgC.height = 2 * h;
+        let bgCtx = bgC.getContext("2d");
+        bgCtx.fillStyle = "#e1f0f4";
+        bgCtx.fillRect(0, 0, 2 * w, 2 * h);
         for (let i = 0; i < 10; i++) {
-            backgroundContext.lineWidth = 10 + Math.random() * 10;
-            let x = Math.random() * 2 * w;
-            let y = Math.random() * 2 * h;
-            let r = Math.random() * 200 + 50;
+            bgCtx.lineWidth = 10 + mr() * 10;
+            let x = mr() * 2 * w;
+            let y = mr() * 2 * h;
+            let r = mr() * 200 + 50;
             for (let ii = -1; ii <= 1; ii++) {
                 for (let jj = -1; jj <= 1; jj++) {
-                    backgroundContext.beginPath();
-                    backgroundContext.arc(ii * 2 * w + x, jj * 2 * h + y, r, 0, 2 * Math.PI);
-                    backgroundContext.strokeStyle = "#b1b6c4";
-                    backgroundContext.stroke();
+                    bgCtx.beginPath();
+                    bgCtx.arc(ii * 2 * w + x, jj * 2 * h + y, r, 0, 2 * Math.PI);
+                    bgCtx.strokeStyle = "#b1b6c4";
+                    bgCtx.stroke();
                 }
             }
         }
-        this.backgroundData = backgroundContext.getImageData(0, 0, 2 * w, 2 * h);
+        this.bgData = bgCtx.getImageData(0, 0, 2 * w, 2 * h);
     }
 
     update() {
+        this.updateTiles();
         if (this.blob) {
             if (!this.blob.nucFreezing) {
                 let newCX = (this.blob.pNuc.x + this.blob.pBod.x) * 0.5;
@@ -74,6 +81,38 @@ class Engine {
         )
     }
 
+    updateTiles() {
+        if (this.blob) {
+            let I = Math.floor(this.blob.pBod.x / 2000);
+            let J = Math.floor(this.blob.pBod.y / 2000);
+            let newTiles = [];
+            let i = 0;
+            while (i < this.tiles.length) {
+                let t = this.tiles[i];
+                if (Math.abs(t.i - I) < 3 && Math.abs(t.j - J) < 3) {
+                    newTiles.push(t);
+                    this.tiles.splice(i, 1);
+                }
+                else {
+                    i++;
+                }
+            }
+            this.tiles.forEach(t => {
+                t.destroy();
+            })
+            for (let i = -2; i < 3; i++) {
+                for (let j = -2; j < 3; j++) {
+                    if (!newTiles.find(t => { return t.i === (I + i) && t.j === (J + j); })) {
+                        let t = new Tile(this, I + i, J + j);
+                        t.instantiate();
+                        newTiles.push(t);
+                    }
+                }
+            }
+            this.tiles = newTiles;
+        }
+    }
+
     draw() {
         let x = - this.cX;
         while (x < 0) {
@@ -89,10 +128,10 @@ class Engine {
         while (y > 2 * this.height) {
             y -= 2 * this.height;
         }
-        this.context.putImageData(this.backgroundData, x, y);
-        this.context.putImageData(this.backgroundData, x - 2 * this.width, y);
-        this.context.putImageData(this.backgroundData, x, y - 2 * this.height);
-        this.context.putImageData(this.backgroundData, x - 2 * this.width, y - 2 * this.height);
+        this.context.putImageData(this.bgData, x, y);
+        this.context.putImageData(this.bgData, x - 2 * this.width, y);
+        this.context.putImageData(this.bgData, x, y - 2 * this.height);
+        this.context.putImageData(this.bgData, x - 2 * this.width, y - 2 * this.height);
         this.gameObjects.forEach(
             go => {
                 if (go.draw) {
@@ -100,6 +139,64 @@ class Engine {
                 }
             }
         )
+    }
+}
+
+class Tile {
+    constructor(e, i, j) {
+        this.e = e;
+        this.i = i;
+        this.j = j;
+        this.x = i * 2000;
+        this.y = j * 2000;
+        this.gos = [];
+    }
+    
+    instantiate() {
+        for (let i = 0; i < 25; i++) {
+            let s = new Stone(this.e, 10 + 50 * mr(), 5 + 10 * mr());
+            s.p.x = this.x + mr() * 2000;
+            s.p.y = this.y + mr() * 2000;
+            this.gos.push(s);
+        }
+
+        for (let i = 0; i < 10; i++) {
+            let s = new Spike(this.e, 5 + 10 * mr(), 2 + 5 * mr());
+            s.p.x = this.x + mr() * 2000;
+            s.p.y = this.y + mr() * 2000;
+            this.gos.push(s);
+        }
+
+        for (let i = 0; i < 20; i++) {
+            let c = new Coin(this.e, 5 + 10 * mr(), 2 + 5 * mr());
+            c.p.x = this.x + mr() * 2000;
+            c.p.y = this.y + mr() * 2000;
+            this.gos.push(c);
+        }
+        
+        let r = Math.random();
+        let st;
+        if (r < 0.5) {
+            st = new Tunnel(this.e, 200);
+            st.p.x = this.x + 1000;
+            st.p.y = this.y + 1000;
+        }
+        else if (r < 1) {
+            st = new Shell(this.e, 200);
+            st.p.x = this.x + 1000;
+            st.p.y = this.y + 1000;
+        }
+        this.gos.push(st);
+
+        this.gos.forEach(g => {
+            g.instantiate();
+        });
+    }
+
+    destroy() {
+        this.gos.forEach(g => {
+            g.destroy();
+        });
     }
 }
 
@@ -216,11 +313,11 @@ class Structure extends GameObject {
     }
 
     update() {
-        let cosd = Math.cos(this.dir);
-        let sind = Math.cos(this.dir);
+        let cosd = mc(this.dir);
+        let sind = mc(this.dir);
         this.p.x += cosd * 0.2
         this.p.y += sind * 0.2;
-        this.dir = Math.cos(this.k / 1000) * Math.PI;
+        this.dir = mc(this.k / 1000) * Math.PI;
         this.k++;
         this.a += Math.PI / 1200;
     }
@@ -246,8 +343,8 @@ class Tunnel extends Structure {
 
     update() {
         super.update();
-        let cosa = Math.cos(this.a);
-        let sina = Math.sin(this.a);
+        let cosa = mc(this.a);
+        let sina = ms(this.a);
         this.coins.forEach(
             (c, i) => {
                 c.p.x = cosa * this.r * (i - 2) / 3 + this.p.x;
@@ -287,16 +384,16 @@ class Shell extends Structure {
         super.update(); 
         this.coins.forEach(
             (c, i) => {
-                let cosa = Math.cos(this.a + i * Math.PI / 2);
-                let sina = Math.sin(this.a + i * Math.PI / 2);
+                let cosa = mc(this.a + i * Math.PI / 2);
+                let sina = ms(this.a + i * Math.PI / 2);
                 c.p.x = cosa * this.r / 3 + this.p.x;
                 c.p.y = sina * this.r / 3 + this.p.y;
             }
         );
         this.spikes.forEach(
             (s, i) => {
-                let cosa = Math.cos(this.a + i * Math.PI / 2);
-                let sina = Math.sin(this.a + i * Math.PI / 2);
+                let cosa = mc(this.a + i * Math.PI / 2);
+                let sina = ms(this.a + i * Math.PI / 2);
                 s.p.x = cosa * this.r + this.p.x;
                 s.p.y = sina * this.r + this.p.y;
             }
@@ -543,41 +640,12 @@ window.addEventListener("load", () => {
     let b = new Blob(eng);
     b.instantiate();
     eng.blob = b;
-
-    let shell = new Tunnel(eng, 200);
-    shell.p.x = 400;
-    shell.p.y = 400;
-    shell.instantiate();
-
-    for (let i = 0; i < 100; i++) {
-        let s = new Stone(eng, 10 + 50 * Math.random(), 5 + 10 * Math.random());
-        s.p.x = - 2000 + Math.random() * 4000;
-        s.p.y = - 2000 + Math.random() * 4000;
-        s.instantiate();
-    }
-
-    for (let i = 0; i < 50; i++) {
-        let s = new Spike(eng, 5 + 10 * Math.random(), 2 + 5 * Math.random());
-        s.p.x = - 2000 + Math.random() * 4000;
-        s.p.y = - 2000 + Math.random() * 4000;
-        s.instantiate();
-    }
-
-    for (let i = 0; i < 50; i++) {
-        let c = new Coin(eng, 5 + 10 * Math.random(), 2 + 5 * Math.random());
-        c.p.x = - 2000 + Math.random() * 4000;
-        c.p.y = - 2000 + Math.random() * 4000;
-        c.instantiate();
-    }
-
     let loop = () => {
         eng.update();
         eng.draw();
         requestAnimationFrame(loop);
     }
     loop();
-    let pdX = NaN;
-    let pdY = NaN;
     eng.canvas.addEventListener("pointerdown", (e) => {
         if (b.nucTemp === 1) {
             b.nucFreezing = true;
