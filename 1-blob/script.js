@@ -181,24 +181,15 @@ class Disc extends GameObject {
     }
 }
 
-class Shell extends GameObject {
+class Structure extends GameObject {
+
     constructor(e, r) {
         super(e);
+        this.dir = 0;
+        this.k = 0;
         this.p = { x: 0, y: 0};
         this.r = r;
         this.a = 0;
-        this.coins = [
-            new Coin(e, 10, 5),
-            new Coin(e, 10, 5),
-            new Coin(e, 10, 5),
-            new Coin(e, 10, 5)
-        ];
-        this.spikes = [
-            new Spike(e, 10, 5),
-            new Spike(e, 10, 5),
-            new Spike(e, 10, 5),
-            new Spike(e, 10, 5)
-        ];
     }
 
     instantiate() {
@@ -225,7 +216,75 @@ class Shell extends GameObject {
     }
 
     update() {
-        this.a += Math.PI / 600;
+        let cosd = Math.cos(this.dir);
+        let sind = Math.cos(this.dir);
+        this.p.x += cosd * 0.2
+        this.p.y += sind * 0.2;
+        this.dir = Math.cos(this.k / 1000) * Math.PI;
+        this.k++;
+        this.a += Math.PI / 1200;
+    }
+}
+
+class Tunnel extends Structure {
+
+    constructor(e, r) {
+        super(e, r);
+        this.coins = [
+            new Coin(e, 20, 5),
+            new Coin(e, 20, 5),
+            new Coin(e, 20, 5),
+            new Coin(e, 20, 5)
+        ];
+        this.spikes = [
+            new Spike(e, 10, 5),
+            new Spike(e, 10, 5),
+            new Spike(e, 10, 5),
+            new Spike(e, 10, 5)
+        ];
+    }
+
+    update() {
+        super.update();
+        let cosa = Math.cos(this.a);
+        let sina = Math.sin(this.a);
+        this.coins.forEach(
+            (c, i) => {
+                c.p.x = cosa * this.r * (i - 2) / 3 + this.p.x;
+                c.p.y = sina * this.r * (i - 2) / 3 + this.p.y;
+            }
+        );
+        this.spikes.forEach(
+            (s, i) => {
+                let c = this.coins[i];
+                let sign = i % 2 === 0 ? 1 : -1;
+                s.p.x = c.p.x + sign * sina * this.r / 3;
+                s.p.y = c.p.y - sign * cosa * this.r / 3;
+            }
+        );
+    }
+}
+
+class Shell extends Structure {
+
+    constructor(e, r) {
+        super(e, r);
+        this.coins = [
+            new Coin(e, 20, 5),
+            new Coin(e, 20, 5),
+            new Coin(e, 20, 5),
+            new Coin(e, 20, 5)
+        ];
+        this.spikes = [
+            new Spike(e, 10, 5),
+            new Spike(e, 10, 5),
+            new Spike(e, 10, 5),
+            new Spike(e, 10, 5)
+        ];
+    }
+
+    update() {
+        super.update(); 
         this.coins.forEach(
             (c, i) => {
                 let cosa = Math.cos(this.a + i * Math.PI / 2);
@@ -485,7 +544,7 @@ window.addEventListener("load", () => {
     b.instantiate();
     eng.blob = b;
 
-    let shell = new Shell(eng, 200);
+    let shell = new Tunnel(eng, 200);
     shell.p.x = 400;
     shell.p.y = 400;
     shell.instantiate();
