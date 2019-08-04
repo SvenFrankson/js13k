@@ -1070,6 +1070,7 @@ function play() {
     document.getElementById("play").style.display = "none";
     document.getElementById("score").style.display = "";
     sc = 0;
+    gk = 0;
     playing = true;
     let en = new Engine(gw, gh);
     let b = new Blob(en);
