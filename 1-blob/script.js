@@ -20,6 +20,7 @@ function lerpColor(hC1, hC2, d) {
     return (o === 1 ? "#" : "") + r.toString(16).padStart(2, "0") + g.toString(16).padStart(2, "0") + b.toString(16).padStart(2, "0");
 }
 
+var gk = 0;
 var mf = Math.floor;
 var mr = Math.random;
 var mc = Math.cos;
@@ -37,10 +38,10 @@ class Engine {
         this.speed = 1;
         this.w = w;
         this.h = h;
-        this.canvas = document.getElementsByTagName("canvas")[0];
-        this.canvas.width = this.w;
-        this.canvas.height = this.h;
-        this.context = this.canvas.getContext("2d");
+        this.cnv = document.getElementsByTagName("canvas")[0];
+        this.cnv.width = this.w;
+        this.cnv.height = this.h;
+        this.ctx = this.cnv.getContext("2d");
         this.gos = [];
         this.txts = [];
         this.tiles = [];
@@ -75,6 +76,7 @@ class Engine {
     }
 
     update() {
+        gk++;
         this.updateTiles();
         this.gos.forEach(
             go => {
@@ -85,22 +87,22 @@ class Engine {
         )
         if (this.blob) {
             this.blob.update();
-            if (!this.blob.nucFreezing) {
+            if (!this.blob.nFrz) {
                 let newCX = (this.blob.pN.x + this.blob.pB.x) * 0.5;
                 let newCY = (this.blob.pN.y + this.blob.pB.y) * 0.5;
                 let dX = newCX - this.cX;
-                if (dX > this.blob.nucTemp * 2) {
-                    dX = this.blob.nucTemp * 2;
+                if (dX > this.blob.nT * 2) {
+                    dX = this.blob.nT * 2;
                 }
-                if (dX < - this.blob.nucTemp * 2) {
-                    dX = - this.blob.nucTemp * 2;
+                if (dX < - this.blob.nT * 2) {
+                    dX = - this.blob.nT * 2;
                 }
                 let dY = newCY - this.cY;
-                if (dY > this.blob.nucTemp * 2) {
-                    dY = this.blob.nucTemp * 2;
+                if (dY > this.blob.nT * 2) {
+                    dY = this.blob.nT * 2;
                 }
-                if (dY < - this.blob.nucTemp * 2) {
-                    dY = - this.blob.nucTemp * 2;
+                if (dY < - this.blob.nT * 2) {
+                    dY = - this.blob.nT * 2;
                 }
                 this.cX += dX;
                 this.cY += dY;
@@ -159,10 +161,10 @@ class Engine {
         while (y > 2 * this.h) {
             y -= 2 * this.h;
         }
-        this.context.putImageData(this.bgData, x, y);
-        this.context.putImageData(this.bgData, x - 2 * this.w, y);
-        this.context.putImageData(this.bgData, x, y - 2 * this.h);
-        this.context.putImageData(this.bgData, x - 2 * this.w, y - 2 * this.h);
+        this.ctx.putImageData(this.bgData, x, y);
+        this.ctx.putImageData(this.bgData, x - 2 * this.w, y);
+        this.ctx.putImageData(this.bgData, x, y - 2 * this.h);
+        this.ctx.putImageData(this.bgData, x - 2 * this.w, y - 2 * this.h);
         this.gos.forEach(
             go => {
                 if (go.draw) {
@@ -197,36 +199,46 @@ class Tile {
         this.strs = [];
     }
 
+    rx() {
+        return this.x + mr() * 2000;
+    }
+
+    ry() {
+        return this.y + mr() * 2000;
+    }
+
     addStone() {
-        console.log("addStone");
         let s = new Stone(this, 2 + mf(5 * mr()), 5 + 10 * mr());
-        s.p.x = this.x + mr() * 2000;
-        s.p.y = this.y + mr() * 2000;
-        s.instantiate();
-        this.stns.push(s);
+        s.p.x = this.rx();
+        s.p.y = this.ry();
+        if (this.check(s.p.x, s.p.y)) {
+            s.instantiate();
+            this.stns.push(s);
+        }
     }
 
     addSpike() {
-        console.log("addSpike");
         let s = new Spike(this, 1 + mf(3 * mr()), 2 + 5 * mr());
-        s.p.x = this.x + mr() * 2000;
-        s.p.y = this.y + mr() * 2000;
-        s.instantiate();
-        this.spks.push(s);
+        s.p.x = this.rx();
+        s.p.y = this.ry();
+        if (this.check(s.p.x, s.p.y)) {
+            s.instantiate();
+            this.spks.push(s);
+        }
     }
 
     addCoin() {
-        console.log("addCoin");
         let c = new Coin(this, 1 + mf(3 * mr()), 2 + 5 * mr());
-        c.p.x = this.x + mr() * 2000;
-        c.p.y = this.y + mr() * 2000;
-        c.instantiate();
-        this.cons.push(c);
+        c.p.x = this.rx();
+        c.p.y = this.ry();
+        if (this.check(c.p.x, c.p.y)) {
+            c.instantiate();
+            this.cons.push(c);
+        }
     }
     
     addStruct() {
-        console.log("addStruct");
-        let r = Math.random();
+        let r = mr();
         let st;
         if (r < 0.25) {
             st = new Tunnel(this, 300);
@@ -240,11 +252,22 @@ class Tile {
         else {
             st = new HotCore(this, 150);
         }
-        st.p.x = this.x + mr() * 2000;
-        st.p.y = this.y + mr() * 2000;
-        st.dir = mr() * Math.PI * 2;
-        st.instantiate();
-        this.strs.push(st);
+        st.p.x = this.rx();
+        st.p.y = this.ry();
+        if (this.check(st.p.x, st.p.y)) {
+            st.dir = mr() * Math.PI * 2;
+            st.instantiate();
+            this.strs.push(st);
+        }
+    }
+
+    check(x, y) {
+        if (Math.abs(x - this.en.blob.pB.x) > 200) {
+            if (Math.abs(x - this.en.blob.pB.x) > 200) {
+                return true;
+            }
+        }
+        return false;
     }
 
     instantiate() {
@@ -252,15 +275,15 @@ class Tile {
             this.addStone();
         }
 
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 8; i++) {
             this.addSpike();
         }
 
-        for (let i = 0; i < 15; i++) {
+        for (let i = 0; i < 12; i++) {
             this.addCoin();
         }
         
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 4; i++) {
             this.addStruct();
         }
     }
@@ -273,13 +296,13 @@ class Tile {
     }
 
     update() {
-        if (this.cons.length < 15) {
+        if (this.cons.length < 12 * (1 + gk / 3600)) {
             this.addCoin();
         }
-        if (this.spks.length < 10) {
+        if (this.spks.length < 8 * (1 + gk / 3600)) {
             this.addSpike();
         }
-        if (this.strs.length < 5) {
+        if (this.strs.length < 4 * (1 + gk / 3600)) {
             this.addStruct();
         }
     }
@@ -311,8 +334,8 @@ class FloatingText {
         this.s = 1;
         this.k = 0;
         this.p = { x: 0, y: 0};
-        this.dx = Math.random() * 2 - 1;
-        this.dy = Math.random() * 2;
+        this.dx = mr() * 2 - 1;
+        this.dy = mr() * 2;
     }
 
     instantiate() {
@@ -329,7 +352,7 @@ class FloatingText {
     draw() {
         this.k++;
         this.s = Math.sin(this.k / 60 * Math.PI) * 20;
-        let ctx = this.en.context;
+        let ctx = this.en.ctx;
         let oX = this.en.w * 0.5 - this.en.cX;
         let oY = this.en.h * 0.5 - this.en.cY;
 
@@ -369,29 +392,30 @@ class Disc extends GameObject {
     }
 
     draw() {
-        let ctx = this.en.context;
+        let z = this;
+        let ctx = z.en.ctx;
         ctx.lineWidth = 2;
-        let oX = this.en.w * 0.5 - this.en.cX;
-        let oY = this.en.h * 0.5 - this.en.cY;
+        let oX = z.en.w * 0.5 - z.en.cX;
+        let oY = z.en.h * 0.5 - z.en.cY;
 
-        let x = oX + this.p.x;
-        let y = oY + this.p.y;
+        let x = oX + z.p.x;
+        let y = oY + z.p.y;
 
-        if (x > - 20 - this.r) {
-            if (y > - 20 - this.r) {
-                if (x < this.en.w + 20 + this.r) {
-                    if (y < this.en.h + 20 + this.r) {
-                        let dx = this.h - 2 * this.h * x / this.en.w;
-                        let dy = this.h - 2 * this.h * y / this.en.h;
+        if (x > - 20 - z.r) {
+            if (y > - 20 - z.r) {
+                if (x < z.en.w + 20 + z.r) {
+                    if (y < z.en.h + 20 + z.r) {
+                        let dx = z.h - 2 * z.h * x / z.en.w;
+                        let dy = z.h - 2 * z.h * y / z.en.h;
                         
                         ctx.beginPath();
-                        ctx.arc(x + dx, y + dy, this.r, 0, 2 * Math.PI);
-                        ctx.strokeStyle = this.colorShadow;
+                        ctx.arc(x + dx, y + dy, z.r, 0, 2 * Math.PI);
+                        ctx.strokeStyle = z.colorShadow;
                         ctx.stroke();
                         
                         ctx.beginPath();
-                        ctx.arc(x, y, this.r, 0, 2 * Math.PI);
-                        ctx.strokeStyle = this.color;
+                        ctx.arc(x, y, z.r, 0, 2 * Math.PI);
+                        ctx.strokeStyle = z.color;
                         ctx.stroke();
                     }
                 }
@@ -614,21 +638,22 @@ class HotCore extends Structure {
 
     update() {
         if (this.check()) {
-            super.update(); 
-            this.coins.forEach(
+            super.update();
+            let z = this;
+            z.coins.forEach(
                 (c, i) => {
-                    let cosa = mc(this.a + i * Math.PI / 2);
-                    let sina = ms(this.a + i * Math.PI / 2);
-                    c.p.x = cosa * this.r + this.p.x;
-                    c.p.y = sina * this.r + this.p.y;
+                    let cosa = mc(z.a + i * Math.PI / 2);
+                    let sina = ms(z.a + i * Math.PI / 2);
+                    c.p.x = cosa * z.r + z.p.x;
+                    c.p.y = sina * z.r + z.p.y;
                 }
             );
-            this.spikes.forEach(
+            z.spikes.forEach(
                 (s, i) => {
-                    let cosa = mc(this.a + i * Math.PI / 2 + Math.PI / 4);
-                    let sina = ms(this.a + i * Math.PI / 2 + Math.PI / 4);
-                    s.p.x = cosa * this.r * 0.5 + this.p.x;
-                    s.p.y = sina * this.r * 0.5 + this.p.y;
+                    let cosa = mc(z.a + i * Math.PI / 2 + Math.PI / 4);
+                    let sina = ms(z.a + i * Math.PI / 2 + Math.PI / 4);
+                    s.p.x = cosa * z.r * 0.5 + z.p.x;
+                    s.p.y = sina * z.r * 0.5 + z.p.y;
                 }
             );
         }
@@ -652,6 +677,16 @@ class Snake extends Structure {
         ];
     }
 
+    superUpdate() {
+        let cosd = mc(this.dir);
+        let sind = mc(this.dir);
+        this.p.x += cosd * 0.4
+        this.p.y += sind * 0.4;
+        this.dir = mc(this.k / 1000) * Math.PI;
+        this.k++;
+        this.a += Math.PI / 1200;
+    }
+
     update() {
         if (this.check()) {
             let b = this.en.blob;
@@ -661,8 +696,8 @@ class Snake extends Structure {
             dx /= d;
             dy /= d;
             if (d < 800) {
-                this.p.x += dx;
-                this.p.y += dy;
+                this.p.x += dx * 0.5;
+                this.p.y += dy * 0.5;
             }
             else {
                 super.update();
@@ -735,41 +770,42 @@ class Stone extends Disc {
     constructor(t, r, h) {
         super(t, r, h, "#9589a9");
         this.type = "stone";
-        this.bump = 0;
-        this.bumping = false;
+        this.bmp = 0;
+        this.bmpg = false;
     }
 
     draw() {
-        if (this.bumping) {
-            this.bump += 1 + this.s * 0.5;
-            this.bumping = this.bump < 3 * this.size;
+        let z = this;
+        if (z.bmpg) {
+            z.bmp += 1 + z.s * 0.5;
+            z.bmpg = z.bmp < 3 * z.size;
         }
         else {
-            this.bump = Math.max(this.bump - 0.5, 0);
+            z.bmp = Math.max(z.bmp - 0.5, 0);
         }
-        let ctx = this.en.context;
+        let ctx = z.en.ctx;
         ctx.lineWidth = 2;
-        let oX = this.en.w * 0.5 - this.en.cX;
-        let oY = this.en.h * 0.5 - this.en.cY;
+        let oX = z.en.w * 0.5 - z.en.cX;
+        let oY = z.en.h * 0.5 - z.en.cY;
 
-        let x = oX + this.p.x;
-        let y = oY + this.p.y;
+        let x = oX + z.p.x;
+        let y = oY + z.p.y;
 
-        if (x > - 20 - this.r) {
-            if (y > - 20 - this.r) {
-                if (x < this.en.w + 20 + this.r) {
-                    if (y < this.en.h + 20 + this.r) {
-                        let dx = this.h - 2 * this.h * x / this.en.w;
-                        let dy = this.h - 2 * this.h * y / this.en.h;
+        if (x > - 20 - z.r) {
+            if (y > - 20 - z.r) {
+                if (x < z.en.w + 20 + z.r) {
+                    if (y < z.en.h + 20 + z.r) {
+                        let dx = z.h - 2 * z.h * x / z.en.w;
+                        let dy = z.h - 2 * z.h * y / z.en.h;
                         
                         ctx.beginPath();
-                        ctx.arc(x + dx, y + dy, this.r + this.bump, 0, 2 * Math.PI);
-                        ctx.strokeStyle = this.colorShadow;
+                        ctx.arc(x + dx, y + dy, z.r + z.bmp, 0, 2 * Math.PI);
+                        ctx.strokeStyle = z.colorShadow;
                         ctx.stroke();
                         
                         ctx.beginPath();
-                        ctx.arc(x, y, this.r + this.bump, 0, 2 * Math.PI);
-                        ctx.strokeStyle = this.color;
+                        ctx.arc(x, y, z.r + z.bmp, 0, 2 * Math.PI);
+                        ctx.strokeStyle = z.color;
                         ctx.stroke();
                     }
                 }
@@ -781,27 +817,28 @@ class Stone extends Disc {
 class Blob {
 
     constructor(e) {
-        this.en = e;
-        this.combo = 1;
-        this.hpM = 20;
-        this.hp = this.hpM;
-        this.springK = 6;
-        this.mBod = 3;
-        this.mNuc = 1;
-        this.nucFreezing = false;
-        this.nucTemp = 1;
-        this.pN = { x: 50, y: 30 };
-        this.vN = { x: 0, y: 0 };
-        this.pB = { x: -50, y: 20 };
-        this.vB = { x: 0, y: 0 };
-        this.pA = { x: 0, y: 0};
+        let z = this;
+        z.en = e;
+        z.combo = 1;
+        z.hpM = 20;
+        z.hp = z.hpM;
+        z.springK = 6;
+        z.mBod = 3;
+        z.mNuc = 1;
+        z.nFrz = false;
+        z.nT = 1;
+        z.pN = { x: 50, y: 30 };
+        z.vN = { x: 0, y: 0 };
+        z.pB = { x: -50, y: 20 };
+        z.vB = { x: 0, y: 0 };
+        z.pA = { x: 0, y: 0};
     }
 
     draw() {
         if (!playing) {
             return;
         }
-        let ctx = this.en.context;
+        let ctx = this.en.ctx;
         let oX = this.en.w * 0.5 - this.en.cX;
         let oY = this.en.h * 0.5 - this.en.cY;
 
@@ -872,30 +909,23 @@ class Blob {
         ctx.beginPath();
         ctx.arc(oX + this.pN.x, oY + this.pN.y, rN, 0, 2 * Math.PI);
         ctx.fill();
-
-        if (this.nucFreezing) {
-            ctx.beginPath();
-            ctx.arc(oX + this.pA.x, oY + this.pA.y, 10, 0, 2 * Math.PI);
-            ctx.fillStyle = "red";
-            ctx.fill();
-        }
     }
 
     update() {
         if (this.hp <= 0) {
             gameover();
         }
-        if (this.nucFreezing) {
-            this.nucTemp -= 1 / 120;
+        if (this.nFrz) {
+            this.nT -= 1 / 120;
         }
         else {
-            this.nucTemp += 1 / 90;
-            this.nucTemp = Math.min(this.nucTemp, 1);
+            this.nT += 1 / 90;
+            this.nT = Math.min(this.nT, 1);
         }
 
-        if (this.nucTemp < 0) {
-            this.nucFreezing = false;
-            this.nucTemp = 0;
+        if (this.nT < 0) {
+            this.nFrz = false;
+            this.nT = 0;
         }
 
         let fBoNX = this.pB.x - this.pN.x;
@@ -942,7 +972,7 @@ class Blob {
             }
         }
 
-        if (this.nucFreezing) {
+        if (this.nFrz) {
             let fAoBX = this.pA.x - this.pB.x;
             let fAoBY = this.pA.y - this.pB.y;
             let dA = Math.sqrt(fAoBX * fAoBX + fAoBY * fAoBY);
@@ -955,10 +985,10 @@ class Blob {
             }
         }
 
-        this.vN.x *= 0.99 * this.nucTemp;
-        this.vN.y *= 0.99 * this.nucTemp;
-        this.vB.x *= 0.9925 * (0.8 + (this.nucFreezing ? 0 : 0.2));
-        this.vB.y *= 0.9925 * (0.8 + (this.nucFreezing ? 0 : 0.2));
+        this.vN.x *= 0.99 * this.nT;
+        this.vN.y *= 0.99 * this.nT;
+        this.vB.x *= 0.9925 * (0.8 + (this.nFrz ? 0 : 0.2));
+        this.vB.y *= 0.9925 * (0.8 + (this.nFrz ? 0 : 0.2));
 
         for (let i = 0; i < this.en.gos.length; i++) {
             let go = this.en.gos[i];
@@ -972,11 +1002,7 @@ class Blob {
                         this.pB.y = go.p.y + nB.y * (30 + go.r + 1);
                         this.vB.x -= 2 * dn * nB.x;
                         this.vB.y -= 2 * dn * nB.y;
-                        go.bumping = true;
-                        let t = new FloatingText(this.en, "BUMP !");
-                        t.p.x = this.pB.x;
-                        t.p.y = this.pB.y;
-                        t.instantiate();
+                        go.bmpg = true;
                     }
                     else if (go.type === "spike") {
                         this.hp = Math.max(this.hp - go.s, 0);
@@ -993,11 +1019,7 @@ class Blob {
                         this.pN.y = go.p.y + nN.y * (20 + go.r + 1);
                         this.vN.x -= 2 * dn * nN.x;
                         this.vN.y -= 2 * dn * nN.y;
-                        go.bumping = true;
-                        let t = new FloatingText(this.en, "BUMP !");
-                        t.p.x = this.pN.x;
-                        t.p.y = this.pN.y;
-                        t.instantiate();
+                        go.bmpg = true;
                     }
                     else if (go.type === "coin") {
                         sc += go.s * this.combo;
@@ -1007,7 +1029,6 @@ class Blob {
                         t.instantiate();
                         go.destroy();
                         this.combo += 1;
-                        console.log(go.t);
                     }
                     else if (go.type === "spike") {
                         this.hp = Math.max(this.hp - go.s, 0);
@@ -1049,27 +1070,27 @@ function play() {
         }
     }
     loop();
-    en.canvas.addEventListener("pointerdown", (e) => {
-        if (b.nucTemp === 1) {
+    en.cnv.addEventListener("pointerdown", (e) => {
+        if (b.nT === 1) {
             b.combo = 1;
-            b.nucFreezing = true;
+            b.nFrz = true;
             b.pA.x = e.clientX - 9 + en.cX - en.w * 0.5;
             b.pA.y = e.clientY - 9 + en.cY - en.h * 0.5;
         }
     });
-    en.canvas.addEventListener("pointermove", (e) => {
-        if (!b.nucFreezing) {
+    en.cnv.addEventListener("pointermove", (e) => {
+        if (!b.nFrz) {
             return;
         }
         b.pA.x = e.clientX - 9 + en.cX - en.w * 0.5;   
         b.pA.y = e.clientY - 9 + en.cY - en.h * 0.5;
     });
-    en.canvas.addEventListener("pointerup", (e) => {
-        if (!b.nucFreezing) {
+    en.cnv.addEventListener("pointerup", (e) => {
+        if (!b.nFrz) {
             return;
         }
-        b.nucFreezing = false;
-        b.nucTemp = 0;
+        b.nFrz = false;
+        b.nT = 0;
     });
 }
 
