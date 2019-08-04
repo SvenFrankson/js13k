@@ -108,7 +108,7 @@ class Engine {
                 this.cY += dY;
             }
         }
-        document.getElementById("score").innerText = sc;
+        document.getElementById("score").innerText = sc.toFixed(0).padStart(6, "0");
     }
 
     updateTiles() {
