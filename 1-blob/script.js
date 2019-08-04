@@ -68,6 +68,12 @@ class Engine {
         this.bgData = bgCtx.getImageData(0, 0, 2 * w, 2 * h);
     }
 
+    destroy() {
+        while (this.gos[0]) {
+            this.gos[0].destroy();
+        }
+    }
+
     update() {
         this.updateTiles();
         this.gos.forEach(
@@ -575,6 +581,9 @@ class Blob {
     }
 
     draw() {
+        if (!playing) {
+            return;
+        }
         let ctx = this.en.context;
         let oX = this.en.w * 0.5 - this.en.cX;
         let oY = this.en.h * 0.5 - this.en.cY;
@@ -656,6 +665,9 @@ class Blob {
     }
 
     update() {
+        if (this.hp <= 0) {
+            gameover();
+        }
         if (this.nucFreezing) {
             this.nucTemp -= 1 / 120;
         }
@@ -705,7 +717,7 @@ class Blob {
             if (d > 0) {
                 fCoNX /= d;
                 fCoNY /= d;
-                let g = (100 / (d / 100) / (d / 100));
+                let g = (50 / (d / 100) / (d / 100));
                 fCoNX *= g / 60 / this.mNuc;
                 fCoNY *= g / 60 / this.mNuc;
                 this.vN.x += fCoNX;
@@ -796,14 +808,27 @@ class Blob {
     }
 }
 
-window.addEventListener("load", () => {
-    let en = new Engine(700, 700);
+var cw = 700;
+var ch = 700;
+var playing = false;
+function play() {
+    if (playing) {
+        return;
+    }
+    document.getElementById("play").style.display = "none";
+    playing = true;
+    let en = new Engine(cw, ch);
     let b = new Blob(en);
     en.blob = b;
     let loop = () => {
         en.update();
         en.draw();
-        requestAnimationFrame(loop);
+        if (playing) {
+            requestAnimationFrame(loop);
+        }
+        else {
+            en.destroy();
+        }
     }
     loop();
     en.canvas.addEventListener("pointerdown", (e) => {
@@ -828,4 +853,18 @@ window.addEventListener("load", () => {
         b.nucFreezing = false;
         b.nucTemp = 0;
     });
-});
+}
+
+function gameover() {
+    document.getElementById("play").style.display = "";
+    playing = false;
+}
+
+window.addEventListener("load", () => {
+    let pBtn = document.getElementById("play");
+    pBtn.style.width = "300px";
+    pBtn.style.left = "200px";
+    pBtn.style.top = "300px";
+    play();
+    requestAnimationFrame(gameover);
+})
