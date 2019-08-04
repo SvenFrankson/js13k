@@ -128,8 +128,8 @@ class Engine {
             this.tiles.forEach(t => {
                 t.destroy();
             })
-            for (let i = -2; i < 3; i++) {
-                for (let j = -2; j < 3; j++) {
+            for (let i = -1; i < 2; i++) {
+                for (let j = -1; j < 2; j++) {
                     if (!newTiles.find(t => { return t.i === (I + i) && t.j === (J + j); })) {
                         let t = new Tile(this, I + i, J + j);
                         t.instantiate();
@@ -139,6 +139,9 @@ class Engine {
             }
             this.tiles = newTiles;
         }
+        this.tiles.forEach(t => {
+            t.update();
+        })
     }
 
     draw() {
@@ -181,73 +184,110 @@ class Engine {
 }
 
 class Tile {
-    constructor(e, i, j) {
-        this.e = e;
+    constructor(en, i, j) {
+        this.en = en;
         this.i = i;
         this.j = j;
         this.x = i * 2000;
         this.y = j * 2000;
-        this.gos = [];
+        this.k = 0;
+        this.stns = [];
+        this.spks = [];
+        this.cons = [];
+        this.strs = [];
+    }
+
+    addStone() {
+        console.log("addStone");
+        let s = new Stone(this, 2 + mf(5 * mr()), 5 + 10 * mr());
+        s.p.x = this.x + mr() * 2000;
+        s.p.y = this.y + mr() * 2000;
+        s.instantiate();
+        this.stns.push(s);
+    }
+
+    addSpike() {
+        console.log("addSpike");
+        let s = new Spike(this, 1 + mf(3 * mr()), 2 + 5 * mr());
+        s.p.x = this.x + mr() * 2000;
+        s.p.y = this.y + mr() * 2000;
+        s.instantiate();
+        this.spks.push(s);
+    }
+
+    addCoin() {
+        console.log("addCoin");
+        let c = new Coin(this, 1 + mf(3 * mr()), 2 + 5 * mr());
+        c.p.x = this.x + mr() * 2000;
+        c.p.y = this.y + mr() * 2000;
+        c.instantiate();
+        this.cons.push(c);
     }
     
+    addStruct() {
+        console.log("addStruct");
+        let r = Math.random();
+        let st;
+        if (r < 0.25) {
+            st = new Tunnel(this, 300);
+        }
+        else if (r < 0.5) {
+            st = new Shell(this, 200);
+        }
+        else if (r < 0.75) {
+            st = new Snake(this, 400);
+        }
+        else {
+            st = new HotCore(this, 150);
+        }
+        st.p.x = this.x + mr() * 2000;
+        st.p.y = this.y + mr() * 2000;
+        st.dir = mr() * Math.PI * 2;
+        this.strs.push(st);
+    }
+
     instantiate() {
         for (let i = 0; i < 20; i++) {
-            let s = new Stone(this.e, 2 + mf(5 * mr()), 5 + 10 * mr());
-            s.p.x = this.x + mr() * 2000;
-            s.p.y = this.y + mr() * 2000;
-            this.gos.push(s);
+            this.addStone();
         }
 
         for (let i = 0; i < 10; i++) {
-            let s = new Spike(this.e, 1 + mf(3 * mr()), 2 + 5 * mr());
-            s.p.x = this.x + mr() * 2000;
-            s.p.y = this.y + mr() * 2000;
-            this.gos.push(s);
+            this.addSpike();
         }
 
         for (let i = 0; i < 15; i++) {
-            let c = new Coin(this.e, 1 + mf(3 * mr()), 2 + 5 * mr());
-            c.p.x = this.x + mr() * 2000;
-            c.p.y = this.y + mr() * 2000;
-            this.gos.push(c);
+            this.addCoin();
         }
         
         for (let i = 0; i < 5; i++) {
-            let r = Math.random();
-            let st;
-            if (r < 0.25) {
-                st = new Tunnel(this.e, 300);
-            }
-            else if (r < 0.5) {
-                st = new Shell(this.e, 200);
-            }
-            else if (r < 0.75) {
-                st = new Snake(this.e, 400);
-            }
-            else {
-                st = new HotCore(this.e, 150);
-            }
-            st.p.x = this.x + mr() * 2000;
-            st.p.y = this.y + mr() * 2000;
-            st.dir = mr() * Math.PI * 2;
-            this.gos.push(st);
+            this.addStruct();
         }
-
-        this.gos.forEach(g => {
-            g.instantiate();
-        });
     }
 
     destroy() {
-        this.gos.forEach(g => {
-            g.destroy();
+        let gos = [...this.stns, ...this.spks, ...this.cons, ...this.strs];
+        gos.forEach(g => {
+            g.destroy(true);
         });
+    }
+
+    update() {
+        if (this.cons.length < 15) {
+            this.addCoin();
+        }
+        if (this.spks.length < 10) {
+            this.addSpike();
+        }
+        if (this.strs.length < 5) {
+            this.addStruct();
+        }
     }
 }
 
 class GameObject {
-    constructor(e) {
-        this.en = e;
+    constructor(t) {
+        this.t = t;
+        this.en = t.en;
     }
 
     instantiate() {
@@ -308,8 +348,8 @@ class FloatingText {
 
 class Disc extends GameObject {
 
-    constructor(e, s, h, color) {
-        super(e);
+    constructor(t, s, h, color) {
+        super(t);
         this.type = "disc";
         this.s = s;
         this.r = s * 10;
@@ -380,7 +420,7 @@ class Disc extends GameObject {
 class DstryDisc extends Disc {
 
     constructor(d) {
-        super(d.en, d.s, d.h, d.color);
+        super(d.t, d.s, d.h, d.color);
         this.type = "dstryd";
         this.p = d.p;
     }
@@ -422,6 +462,10 @@ class Structure extends GameObject {
         let i = this.en.gos.indexOf(this);
         if (i !== -1) {
             this.en.gos.splice(i, 1);
+        }
+        i = this.t.strs.indexOf(this);
+        if (i !== -1) {
+            this.t.strs.splice(i, 1);
         }
         this.coins.forEach(c => {
             c.destroy();
@@ -469,19 +513,19 @@ class Structure extends GameObject {
 
 class Tunnel extends Structure {
 
-    constructor(e, r) {
-        super(e, r);
+    constructor(t, r) {
+        super(t, r);
         this.coins = [
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5)
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5)
         ];
         this.spikes = [
-            new Spike(e, 1, 5),
-            new Spike(e, 1, 5),
-            new Spike(e, 1, 5),
-            new Spike(e, 1, 5)
+            new Spike(t, 1, 5),
+            new Spike(t, 1, 5),
+            new Spike(t, 1, 5),
+            new Spike(t, 1, 5)
         ];
     }
 
@@ -510,19 +554,19 @@ class Tunnel extends Structure {
 
 class Shell extends Structure {
 
-    constructor(e, r) {
-        super(e, r);
+    constructor(t, r) {
+        super(t, r);
         this.coins = [
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5)
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5)
         ];
         this.spikes = [
-            new Spike(e, 1, 5),
-            new Spike(e, 1, 5),
-            new Spike(e, 1, 5),
-            new Spike(e, 1, 5)
+            new Spike(t, 1, 5),
+            new Spike(t, 1, 5),
+            new Spike(t, 1, 5),
+            new Spike(t, 1, 5)
         ];
     }
 
@@ -551,19 +595,19 @@ class Shell extends Structure {
 
 class HotCore extends Structure {
 
-    constructor(e, r) {
-        super(e, r);
+    constructor(t, r) {
+        super(t, r);
         this.coins = [
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5)
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5)
         ];
         this.spikes = [
-            new Spike(e, 1, 5),
-            new Spike(e, 1, 5),
-            new Spike(e, 1, 5),
-            new Spike(e, 1, 5)
+            new Spike(t, 1, 5),
+            new Spike(t, 1, 5),
+            new Spike(t, 1, 5),
+            new Spike(t, 1, 5)
         ];
     }
 
@@ -592,18 +636,18 @@ class HotCore extends Structure {
 
 class Snake extends Structure {
 
-    constructor(e, l) {
-        super(e);
+    constructor(t, l) {
+        super(t);
         this.l = l;
         this.r = l / 6;
         this.coins = [
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5),
-            new Coin(e, 2, 5)
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5),
+            new Coin(t, 2, 5)
         ];
         this.spikes = [
-            new Spike(e, 1, 5)
+            new Spike(t, 1, 5)
         ];
     }
 
@@ -648,8 +692,8 @@ class Snake extends Structure {
 var coins = [];
 class Coin extends Disc {
     
-    constructor(e, r, h) {
-        super(e, r, h, "#b5eecb");
+    constructor(t, r, h) {
+        super(t, r, h, "#b5eecb");
         this.type = "coin";
     }
 
@@ -664,19 +708,31 @@ class Coin extends Disc {
         if (i !== -1) {
             coins.splice(i, 1);
         }
+        i = this.t.cons.indexOf(this);
+        if (i !== -1) {
+            this.t.cons.splice(i, 1);
+        }
     }
 }
 
 class Spike extends Disc {
-    constructor(e, r, h) {
-        super(e, r, h, "#f8a2a8");
+    constructor(t, r, h) {
+        super(t, r, h, "#f8a2a8");
         this.type = "spike";
+    }
+
+    destroy() {
+        super.destroy();
+        let i =  this.t.spks.indexOf(this);
+        if (i !== -1) {
+            this.t.spks.splice(i, 1);
+        }
     }
 }
 
 class Stone extends Disc {
-    constructor(e, r, h) {
-        super(e, r, h, "#9589a9");
+    constructor(t, r, h) {
+        super(t, r, h, "#9589a9");
         this.type = "stone";
         this.bump = 0;
         this.bumping = false;
@@ -950,6 +1006,7 @@ class Blob {
                         t.instantiate();
                         go.destroy();
                         this.combo += 1;
+                        console.log(go.t);
                     }
                     else if (go.type === "spike") {
                         this.hp = Math.max(this.hp - go.s, 0);
