@@ -22,6 +22,8 @@ function lerpColor(hC1, hC2, d) {
 
 var gw = 500;
 var gh = 500;
+var bTop = 0;
+var bLeft = 0;
 var gk = 0;
 var mf = Math.floor;
 var mr = Math.random;
@@ -816,7 +818,7 @@ class Blob {
         let z = this;
         z.en = e;
         z.cbo = 1;
-        z.hpM = 5;
+        z.hpM = 20;
         z.hp = z.hpM;
         z.sk = 6;
         z.mBod = 3;
@@ -939,6 +941,9 @@ class Blob {
         let fBoNX = z.pB.x - z.pN.x;
         let fBoNY = z.pB.y - z.pN.y;
         let d = Math.sqrt(fBoNX * fBoNX + fBoNY * fBoNY);
+        if (d > 250 && z.nFrz) {
+            z.brk();
+        }
         if (d > 0) {
             fBoNX /= d;
             fBoNY /= d;
@@ -1057,8 +1062,6 @@ class Blob {
     }
 }
 
-var cw = 700;
-var ch = 700;
 var playing = false;
 function play() {
     if (playing) {
@@ -1068,7 +1071,7 @@ function play() {
     document.getElementById("score").style.display = "";
     sc = 0;
     playing = true;
-    let en = new Engine(cw, ch);
+    let en = new Engine(gw, gh);
     let b = new Blob(en);
     en.blob = b;
     let loop = () => {
@@ -1085,8 +1088,8 @@ function play() {
     en.cnv.addEventListener("pointerdown", (e) => {
         if (b.nT === 1) {
             b.cbo = 1;
-            b.pA.x = e.clientX - 9 + en.cX - en.w * 0.5;
-            b.pA.y = e.clientY - 9 + en.cY - en.h * 0.5;
+            b.pA.x = e.clientX - bLeft + en.cX - en.w * 0.5;
+            b.pA.y = e.clientY - bTop + en.cY - en.h * 0.5;
             let dx = b.pA.x - b.pB.x;
             let dy = b.pA.y - b.pB.y;
             if (dx * dx + dy * dy < 60 * 60) {
@@ -1098,8 +1101,8 @@ function play() {
         if (!b.nFrz) {
             return;
         }
-        b.pA.x = e.clientX - 9 + en.cX - en.w * 0.5;   
-        b.pA.y = e.clientY - 9 + en.cY - en.h * 0.5;
+        b.pA.x = e.clientX - bLeft + en.cX - en.w * 0.5;   
+        b.pA.y = e.clientY - bTop + en.cY - en.h * 0.5;
     });
     en.cnv.addEventListener("pointerup", (e) => {
         if (!b.nFrz) {
@@ -1139,11 +1142,21 @@ function gameover() {
     loop();
 }
 
-window.addEventListener("load", () => {
+function resize() {
+    gw = window.innerWidth;
+    gw = Math.min(gw, 1000);
+    gh = window.innerHeight;
+    gh = Math.min(gh, 1000);
     let pBtn = document.getElementById("play");
     pBtn.style.width = "400px";
-    pBtn.style.left = "150px";
-    pBtn.style.top = "300px";
+    pBtn.style.left = (gw * 0.5 - 200).toFixed(0) + "px";
+    pBtn.style.top = (gh * 0.5).toFixed(0) + "px";
+    bLeft = window.innerWidth * 0.5 - gw * 0.5;
+    document.body.style.left = bLeft.toFixed(0) + "px";
+}
+
+window.addEventListener("load", () => {
+    resize();
     play();
     requestAnimationFrame(gameready);
 })
