@@ -215,12 +215,16 @@ class Tile {
         for (let i = 0; i < 5; i++) {
             let r = Math.random();
             let st;
+            /*
             if (r < 0.5) {
                 st = new Tunnel(this.e, 300);
             }
             else if (r < 1) {
                 st = new Shell(this.e, 200);
             }
+            */
+            st = new Snake(this.e, 400);
+            //st = new HotCore(this.e, 150);
             st.p.x = this.x + mr() * 2000;
             st.p.y = this.y + mr() * 2000;
             st.dir = mr() * Math.PI * 2;
@@ -482,6 +486,115 @@ class Shell extends Structure {
                 s.p.y = sina * this.r + this.p.y;
             }
         );
+    }
+}
+
+class HotCore extends Structure {
+
+    constructor(e, r) {
+        super(e, r);
+        this.coins = [
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5)
+        ];
+        this.spikes = [
+            new Spike(e, 1, 5),
+            new Spike(e, 1, 5),
+            new Spike(e, 1, 5),
+            new Spike(e, 1, 5)
+        ];
+    }
+
+    update() {
+        super.update(); 
+        this.coins.forEach(
+            (c, i) => {
+                let cosa = mc(this.a + i * Math.PI / 2);
+                let sina = ms(this.a + i * Math.PI / 2);
+                c.p.x = cosa * this.r + this.p.x;
+                c.p.y = sina * this.r + this.p.y;
+            }
+        );
+        this.spikes.forEach(
+            (s, i) => {
+                let cosa = mc(this.a + i * Math.PI / 2 + Math.PI / 4);
+                let sina = ms(this.a + i * Math.PI / 2 + Math.PI / 4);
+                s.p.x = cosa * this.r * 0.5 + this.p.x;
+                s.p.y = sina * this.r * 0.5 + this.p.y;
+            }
+        );
+    }
+}
+
+class Snake extends Structure {
+
+    constructor(e, l) {
+        super(e);
+        this.l = l;
+        this.r = l / 6;
+        this.coins = [
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5),
+            new Coin(e, 2, 5)
+        ];
+        this.spikes = [
+            new Spike(e, 1, 5),
+            new Spike(e, 1, 5)
+        ];
+    }
+
+    update() {
+        let b = this.en.blob;
+        let dx = b.pN.x - this.p.x;
+        let dy = b.pN.y - this.p.y;
+        let d = Math.sqrt(dx * dx + dy * dy);
+        dx /= d;
+        dy /= d;
+        if (d < 800) {
+            this.p.x += dx;
+            this.p.y += dy;
+        }
+        else {
+            super.update();
+        }
+        this.spikes[0].p.x = this.p.x;
+        this.spikes[0].p.y = this.p.y;
+        let pr = this.spikes[0];
+        for (let i = 1; i < this.spikes.length; i++) {
+            let s = this.spikes[i];
+            if (s) {
+                let dx = s.p.x - pr.p.x;
+                let dy = s.p.y - pr.p.y;
+                let d = dx * dx + dy * dy;
+                if (d > this.r * this.r) {
+                    d = Math.sqrt(d);
+                    dx /= d;
+                    dy /= d;
+                    s.p.x = pr.p.x + dx * this.r;
+                    s.p.y = pr.p.y + dy * this.r;
+                }
+                pr = s;
+            }
+        }
+        for (let i = 0; i < this.coins.length; i++) {
+            let c = this.coins[i];
+            if (c) {
+                let dx = c.p.x - pr.p.x;
+                let dy = c.p.y - pr.p.y;
+                let d = dx * dx + dy * dy;
+                if (d > this.r * this.r) {
+                    d = Math.sqrt(d);
+                    dx /= d;
+                    dy /= d;
+                    c.p.x = pr.p.x + dx * this.r;
+                    c.p.y = pr.p.y + dy * this.r;
+                }
+                pr = c;
+            }
+        }
     }
 }
 
