@@ -677,16 +677,6 @@ class Snake extends Structure {
         ];
     }
 
-    superUpdate() {
-        let cosd = mc(this.dir);
-        let sind = mc(this.dir);
-        this.p.x += cosd * 0.4
-        this.p.y += sind * 0.4;
-        this.dir = mc(this.k / 1000) * Math.PI;
-        this.k++;
-        this.a += Math.PI / 1200;
-    }
-
     update() {
         if (this.check()) {
             let b = this.en.blob;
@@ -832,21 +822,23 @@ class Blob {
         z.pB = { x: -50, y: 20 };
         z.vB = { x: 0, y: 0 };
         z.pA = { x: 0, y: 0};
+        z.flk = 0;
     }
 
     draw() {
+        let z = this;
         if (!playing) {
             return;
         }
-        let ctx = this.en.ctx;
-        let oX = this.en.w * 0.5 - this.en.cX;
-        let oY = this.en.h * 0.5 - this.en.cY;
+        let ctx = z.en.ctx;
+        let oX = z.en.w * 0.5 - z.en.cX;
+        let oY = z.en.h * 0.5 - z.en.cY;
 
         let rN = 20;
         let rB = 30;
 
-        let dX = this.pB.x - this.pN.x;
-        let dY = this.pB.y - this.pN.y;
+        let dX = z.pB.x - z.pN.x;
+        let dY = z.pB.y - z.pN.y;
         let d = Math.sqrt(dX * dX + dY * dY);
         dX /= d;
         dY /= d;
@@ -854,10 +846,15 @@ class Blob {
         rB -= d / 10;
         rB = Math.max(rB, rN);
 
-        let c = lerpColor(cGrn, cBlk, 1 - this.hp / this.hpM);
+        z.flk = Math.max(z.flk - 1, 0);
+        let c = lerpColor(cGrn, cBlk, 1 - z.hp / z.hpM);
+        if (z.flk > 0) {
+            let co = Math.cos(z.flk * Math.PI * 2 / 60 * 6) * 0.5 + 0.5;
+            c = lerpColor(c, "#f8a2a8", co);
+        }
 
         ctx.beginPath();
-        ctx.arc(oX + this.pB.x, oY + this.pB.y, rB + 2, 0, 2 * Math.PI);
+        ctx.arc(oX + z.pB.x, oY + z.pB.y, rB + 2, 0, 2 * Math.PI);
         ctx.fillStyle = c;
         ctx.fill();
 
@@ -866,7 +863,7 @@ class Blob {
             dd = dd * dd;
             let r = rN * dd + rN * 0.5 * (1 - dd);
             ctx.beginPath();
-            ctx.arc(oX + this.pN.x + dX * i, oY + this.pN.y + dY * i, r + 2, 0, 2 * Math.PI);
+            ctx.arc(oX + z.pN.x + dX * i, oY + z.pN.y + dY * i, r + 2, 0, 2 * Math.PI);
             ctx.fill();
         }
 
@@ -875,17 +872,17 @@ class Blob {
             dd = Math.pow(dd, 1.5);
             let r = rN * 0.5 * (1 - dd) + rB * dd;
             ctx.beginPath();
-            ctx.arc(oX + this.pN.x + dX * i, oY + this.pN.y + dY * i, r + 2, 0, 2 * Math.PI);
+            ctx.arc(oX + z.pN.x + dX * i, oY + z.pN.y + dY * i, r + 2, 0, 2 * Math.PI);
             ctx.fill();
         }
 
         ctx.beginPath();
-        ctx.arc(oX + this.pN.x, oY + this.pN.y, rN + 2, 0, 2 * Math.PI);
+        ctx.arc(oX + z.pN.x, oY + z.pN.y, rN + 2, 0, 2 * Math.PI);
         ctx.fill();
 
         ctx.fillStyle = cBlk;
         ctx.beginPath();
-        ctx.arc(oX + this.pB.x, oY + this.pB.y, rB, 0, 2 * Math.PI);
+        ctx.arc(oX + z.pB.x, oY + z.pB.y, rB, 0, 2 * Math.PI);
         ctx.fill();
 
         for (let i = 0; i < d * 0.5; i += 2) {
@@ -893,7 +890,7 @@ class Blob {
             dd = dd * dd;
             let r = rN * dd + rN * 0.5 * (1 - dd);
             ctx.beginPath();
-            ctx.arc(oX + this.pN.x + dX * i, oY + this.pN.y + dY * i, r, 0, 2 * Math.PI);
+            ctx.arc(oX + z.pN.x + dX * i, oY + z.pN.y + dY * i, r, 0, 2 * Math.PI);
             ctx.fill();
         }
 
@@ -902,34 +899,39 @@ class Blob {
             dd = Math.pow(dd, 1.5);
             let r = rN * 0.5 * (1 - dd) + rB * dd;
             ctx.beginPath();
-            ctx.arc(oX + this.pN.x + dX * i, oY + this.pN.y + dY * i, r, 0, 2 * Math.PI);
+            ctx.arc(oX + z.pN.x + dX * i, oY + z.pN.y + dY * i, r, 0, 2 * Math.PI);
             ctx.fill();
         }
 
         ctx.beginPath();
-        ctx.arc(oX + this.pN.x, oY + this.pN.y, rN, 0, 2 * Math.PI);
+        ctx.arc(oX + z.pN.x, oY + z.pN.y, rN, 0, 2 * Math.PI);
         ctx.fill();
     }
 
+    brk() {
+        this.nFrz = false;
+        this.nT = 0;
+    }
+
     update() {
-        if (this.hp <= 0) {
+        let z = this;
+        if (z.hp <= 0) {
             gameover();
         }
-        if (this.nFrz) {
-            this.nT -= 1 / 120;
+        if (z.nFrz) {
+            z.nT -= 1 / 120;
         }
         else {
-            this.nT += 1 / 90;
-            this.nT = Math.min(this.nT, 1);
+            z.nT += 1 / 90;
+            z.nT = Math.min(z.nT, 1);
         }
 
-        if (this.nT < 0) {
-            this.nFrz = false;
-            this.nT = 0;
+        if (z.nT < 0) {
+            z.brk;
         }
 
-        let fBoNX = this.pB.x - this.pN.x;
-        let fBoNY = this.pB.y - this.pN.y;
+        let fBoNX = z.pB.x - z.pN.x;
+        let fBoNY = z.pB.y - z.pN.y;
         let d = Math.sqrt(fBoNX * fBoNX + fBoNY * fBoNY);
         if (d > 0) {
             fBoNX /= d;
@@ -937,113 +939,115 @@ class Blob {
             let fNoBX = - fBoNX;
             let fNoBY = - fBoNY;
 
-            this.vN.x += fBoNX * d * this.springK / 60 / this.mNuc;
-            this.vN.y += fBoNY * d * this.springK / 60 / this.mNuc;
+            z.vN.x += fBoNX * d * z.springK / 60 / z.mNuc;
+            z.vN.y += fBoNY * d * z.springK / 60 / z.mNuc;
 
-            this.vB.x += fNoBX * d * this.springK / 60 / this.mBod;
-            this.vB.y += fNoBY * d * this.springK / 60 / this.mBod;
+            z.vB.x += fNoBX * d * z.springK / 60 / z.mBod;
+            z.vB.y += fNoBY * d * z.springK / 60 / z.mBod;
         }
 
         coins = coins.sort((c1, c2) => { 
-            let dx1 = (c1.p.x - this.pN.x);
+            let dx1 = (c1.p.x - z.pN.x);
             dx1 *= dx1;
-            let dy1 = (c1.p.y - this.pN.y);
+            let dy1 = (c1.p.y - z.pN.y);
             dy1 *= dy1;
-            let dx2 = (c2.p.x - this.pN.x);
+            let dx2 = (c2.p.x - z.pN.x);
             dx2 *= dx2;
-            let dy2 = (c2.p.y - this.pN.y);
+            let dy2 = (c2.p.y - z.pN.y);
             dy2 *= dy2;
             return (dx1 + dy1) - (dx2 + dy2);
         })
 
         let cC = coins[0];
         if (cC) {
-            let fCoNX = cC.p.x - this.pN.x;
-            let fCoNY = cC.p.y - this.pN.y;
+            let fCoNX = cC.p.x - z.pN.x;
+            let fCoNY = cC.p.y - z.pN.y;
             let d = Math.sqrt(fCoNX * fCoNX + fCoNY * fCoNY);
             if (d > 0) {
                 fCoNX /= d;
                 fCoNY /= d;
                 let g = (50 / (d / 100) / (d / 100));
-                fCoNX *= g / 60 / this.mNuc;
-                fCoNY *= g / 60 / this.mNuc;
-                this.vN.x += fCoNX;
-                this.vN.y += fCoNY;
+                fCoNX *= g / 60 / z.mNuc;
+                fCoNY *= g / 60 / z.mNuc;
+                z.vN.x += fCoNX;
+                z.vN.y += fCoNY;
             }
         }
 
-        if (this.nFrz) {
-            let fAoBX = this.pA.x - this.pB.x;
-            let fAoBY = this.pA.y - this.pB.y;
+        if (z.nFrz) {
+            let fAoBX = z.pA.x - z.pB.x;
+            let fAoBY = z.pA.y - z.pB.y;
             let dA = Math.sqrt(fAoBX * fAoBX + fAoBY * fAoBY);
             if (dA > 0) {
                 fAoBX /= dA;
                 fAoBY /= dA;
     
-                this.vB.x += fAoBX * dA * this.springK * 100 / 60 / this.mBod;
-                this.vB.y += fAoBY * dA * this.springK * 100 / 60 / this.mBod;
+                z.vB.x += fAoBX * dA * z.springK * 100 / 60 / z.mBod;
+                z.vB.y += fAoBY * dA * z.springK * 100 / 60 / z.mBod;
             }
         }
 
-        this.vN.x *= 0.99 * this.nT;
-        this.vN.y *= 0.99 * this.nT;
-        this.vB.x *= 0.9925 * (0.8 + (this.nFrz ? 0 : 0.2));
-        this.vB.y *= 0.9925 * (0.8 + (this.nFrz ? 0 : 0.2));
+        z.vN.x *= 0.99 * z.nT;
+        z.vN.y *= 0.99 * z.nT;
+        z.vB.x *= 0.9925 * (0.8 + (z.nFrz ? 0 : 0.2));
+        z.vB.y *= 0.9925 * (0.8 + (z.nFrz ? 0 : 0.2));
 
-        for (let i = 0; i < this.en.gos.length; i++) {
-            let go = this.en.gos[i];
+        for (let i = 0; i < z.en.gos.length; i++) {
+            let go = z.en.gos[i];
             if (go.collide) {
-                let bCollide = go.collide(this.pB.x, this.pB.y, 30);
+                let bCollide = go.collide(z.pB.x, z.pB.y, 30);
                 if (bCollide) {
                     if (go.type === "stone") {
-                        let nB = go.collisionNormal(this.pB.x, this.pB.y, 30);
-                        let dn = this.vB.x * nB.x + this.vB.y * nB.y;
-                        this.pB.x = go.p.x + nB.x * (30 + go.r + 1);
-                        this.pB.y = go.p.y + nB.y * (30 + go.r + 1);
-                        this.vB.x -= 2 * dn * nB.x;
-                        this.vB.y -= 2 * dn * nB.y;
+                        let nB = go.collisionNormal(z.pB.x, z.pB.y, 30);
+                        let dn = z.vB.x * nB.x + z.vB.y * nB.y;
+                        z.pB.x = go.p.x + nB.x * (30 + go.r + 1);
+                        z.pB.y = go.p.y + nB.y * (30 + go.r + 1);
+                        z.vB.x -= 2 * dn * nB.x;
+                        z.vB.y -= 2 * dn * nB.y;
                         go.bmpg = true;
                     }
                     else if (go.type === "spike") {
-                        this.hp = Math.max(this.hp - go.s, 0);
+                        z.flk = 60;
+                        z.hp = Math.max(z.hp - go.s, 0);
                         go.destroy();
-                        this.combo = 1;
+                        z.combo = 1;
                     }
                 }
-                let nCollide = go.collide(this.pN.x, this.pN.y, 20);
+                let nCollide = go.collide(z.pN.x, z.pN.y, 20);
                 if (nCollide) {
                     if (go.type === "stone") {
-                        let nN = go.collisionNormal(this.pN.x, this.pN.y, 20);
-                        let dn = this.vN.x * nN.x + this.vN.y * nN.y;
-                        this.pN.x = go.p.x + nN.x * (20 + go.r + 1);
-                        this.pN.y = go.p.y + nN.y * (20 + go.r + 1);
-                        this.vN.x -= 2 * dn * nN.x;
-                        this.vN.y -= 2 * dn * nN.y;
+                        let nN = go.collisionNormal(z.pN.x, z.pN.y, 20);
+                        let dn = z.vN.x * nN.x + z.vN.y * nN.y;
+                        z.pN.x = go.p.x + nN.x * (20 + go.r + 1);
+                        z.pN.y = go.p.y + nN.y * (20 + go.r + 1);
+                        z.vN.x -= 2 * dn * nN.x;
+                        z.vN.y -= 2 * dn * nN.y;
                         go.bmpg = true;
                     }
                     else if (go.type === "coin") {
-                        sc += go.s * this.combo;
-                        let t = new FloatingText(this.en, "+ " + (go.s * this.combo).toFixed(0));
-                        t.p.x = this.pB.x;
-                        t.p.y = this.pB.y;
+                        sc += go.s * z.combo;
+                        let t = new FloatingText(z.en, "+ " + (go.s * z.combo).toFixed(0));
+                        t.p.x = z.pB.x;
+                        t.p.y = z.pB.y;
                         t.instantiate();
                         go.destroy();
-                        this.combo += 1;
+                        z.combo += 1;
                     }
                     else if (go.type === "spike") {
-                        this.hp = Math.max(this.hp - go.s, 0);
+                        z.flk = 60;
+                        z.hp = Math.max(z.hp - go.s, 0);
                         go.destroy();
-                        this.combo = 1;
+                        z.combo = 1;
                     }
                 }
             }
         }
 
-        this.pN.x += this.vN.x / 60;
-        this.pN.y += this.vN.y / 60;
+        z.pN.x += z.vN.x / 60;
+        z.pN.y += z.vN.y / 60;
 
-        this.pB.x += this.vB.x / 60;
-        this.pB.y += this.vB.y / 60;
+        z.pB.x += z.vB.x / 60;
+        z.pB.y += z.vB.y / 60;
     }
 }
 
@@ -1073,9 +1077,13 @@ function play() {
     en.cnv.addEventListener("pointerdown", (e) => {
         if (b.nT === 1) {
             b.combo = 1;
-            b.nFrz = true;
             b.pA.x = e.clientX - 9 + en.cX - en.w * 0.5;
             b.pA.y = e.clientY - 9 + en.cY - en.h * 0.5;
+            let dx = b.pA.x - b.pB.x;
+            let dy = b.pA.y - b.pB.y;
+            if (dx * dx + dy * dy < 60 * 60) {
+                b.nFrz = true;
+            }
         }
     });
     en.cnv.addEventListener("pointermove", (e) => {
@@ -1089,8 +1097,7 @@ function play() {
         if (!b.nFrz) {
             return;
         }
-        b.nFrz = false;
-        b.nT = 0;
+        b.brk();
     });
 }
 
