@@ -20,6 +20,8 @@ function lerpColor(hC1, hC2, d) {
     return (o === 1 ? "#" : "") + r.toString(16).padStart(2, "0") + g.toString(16).padStart(2, "0") + b.toString(16).padStart(2, "0");
 }
 
+var gw = 500;
+var gh = 500;
 var gk = 0;
 var mf = Math.floor;
 var mr = Math.random;
@@ -33,18 +35,18 @@ var cGrn = "#b5eecb";
 
 class Engine {
     constructor(w, h) {
-        this.cX = 0;
-        this.cY = 0;
-        this.speed = 1;
-        this.w = w;
-        this.h = h;
-        this.cnv = document.getElementsByTagName("canvas")[0];
-        this.cnv.width = this.w;
-        this.cnv.height = this.h;
-        this.ctx = this.cnv.getContext("2d");
-        this.gos = [];
-        this.txts = [];
-        this.tiles = [];
+        let z = this;
+        z.cX = 0;
+        z.cY = 0;
+        z.w = w;
+        z.h = h;
+        z.cnv = document.getElementsByTagName("canvas")[0];
+        z.cnv.width = z.w;
+        z.cnv.height = z.h;
+        z.ctx = z.cnv.getContext("2d");
+        z.gos = [];
+        z.txts = [];
+        z.tiles = [];
 
         let bgC = document.createElement("canvas");
         bgC.width = 2 * w;
@@ -66,116 +68,119 @@ class Engine {
                 }
             }
         }
-        this.bgData = bgCtx.getImageData(0, 0, 2 * w, 2 * h);
+        z.bgData = bgCtx.getImageData(0, 0, 2 * w, 2 * h);
     }
 
-    destroy() {
+    dstr() {
         while (this.gos[0]) {
-            this.gos[0].destroy();
+            this.gos[0].dstr();
         }
     }
 
     update() {
+        let z = this;
         gk++;
-        this.updateTiles();
-        this.gos.forEach(
+        z.updateTiles();
+        z.gos.forEach(
             go => {
                 if (go.update) {
                     go.update();
                 }
             }
         )
-        if (this.blob) {
-            this.blob.update();
-            if (!this.blob.nFrz) {
-                let newCX = (this.blob.pN.x + this.blob.pB.x) * 0.5;
-                let newCY = (this.blob.pN.y + this.blob.pB.y) * 0.5;
-                let dX = newCX - this.cX;
-                if (dX > this.blob.nT * 2) {
-                    dX = this.blob.nT * 2;
+        if (z.blob) {
+            z.blob.update();
+            if (!z.blob.nFrz) {
+                let newCX = (z.blob.pN.x + z.blob.pB.x) * 0.5;
+                let newCY = (z.blob.pN.y + z.blob.pB.y) * 0.5;
+                let dX = newCX - z.cX;
+                if (dX > z.blob.nT * 2) {
+                    dX = z.blob.nT * 2;
                 }
-                if (dX < - this.blob.nT * 2) {
-                    dX = - this.blob.nT * 2;
+                if (dX < - z.blob.nT * 2) {
+                    dX = - z.blob.nT * 2;
                 }
-                let dY = newCY - this.cY;
-                if (dY > this.blob.nT * 2) {
-                    dY = this.blob.nT * 2;
+                let dY = newCY - z.cY;
+                if (dY > z.blob.nT * 2) {
+                    dY = z.blob.nT * 2;
                 }
-                if (dY < - this.blob.nT * 2) {
-                    dY = - this.blob.nT * 2;
+                if (dY < - z.blob.nT * 2) {
+                    dY = - z.blob.nT * 2;
                 }
-                this.cX += dX;
-                this.cY += dY;
+                z.cX += dX;
+                z.cY += dY;
             }
         }
         document.getElementById("score").innerText = sc.toFixed(0).padStart(6, "0");
     }
 
     updateTiles() {
-        if (this.blob) {
-            let I = Math.floor(this.blob.pB.x / 2000);
-            let J = Math.floor(this.blob.pB.y / 2000);
+        let z = this;
+        if (z.blob) {
+            let I = Math.floor(z.blob.pB.x / 2000);
+            let J = Math.floor(z.blob.pB.y / 2000);
             let newTiles = [];
             let i = 0;
-            while (i < this.tiles.length) {
-                let t = this.tiles[i];
+            while (i < z.tiles.length) {
+                let t = z.tiles[i];
                 if (Math.abs(t.i - I) < 3 && Math.abs(t.j - J) < 3) {
                     newTiles.push(t);
-                    this.tiles.splice(i, 1);
+                    z.tiles.splice(i, 1);
                 }
                 else {
                     i++;
                 }
             }
-            this.tiles.forEach(t => {
-                t.destroy();
+            z.tiles.forEach(t => {
+                t.dstr();
             })
             for (let i = -1; i < 2; i++) {
                 for (let j = -1; j < 2; j++) {
                     if (!newTiles.find(t => { return t.i === (I + i) && t.j === (J + j); })) {
-                        let t = new Tile(this, I + i, J + j);
-                        t.instantiate();
+                        let t = new Tile(z, I + i, J + j);
+                        t.inst();
                         newTiles.push(t);
                     }
                 }
             }
-            this.tiles = newTiles;
+            z.tiles = newTiles;
         }
-        this.tiles.forEach(t => {
+        z.tiles.forEach(t => {
             t.update();
         })
     }
 
     draw() {
-        let x = - this.cX;
+        let z = this;
+        let x = - z.cX;
         while (x < 0) {
-            x += 2 * this.w;
+            x += 2 * z.w;
         }
-        while (x > 2 * this.w) {
-            x -= 2 * this.w;
+        while (x > 2 * z.w) {
+            x -= 2 * z.w;
         }
-        let y = - this.cY;
+        let y = - z.cY;
         while (y < 0) {
-            y += 2 * this.h;
+            y += 2 * z.h;
         }
-        while (y > 2 * this.h) {
-            y -= 2 * this.h;
+        while (y > 2 * z.h) {
+            y -= 2 * z.h;
         }
-        this.ctx.putImageData(this.bgData, x, y);
-        this.ctx.putImageData(this.bgData, x - 2 * this.w, y);
-        this.ctx.putImageData(this.bgData, x, y - 2 * this.h);
-        this.ctx.putImageData(this.bgData, x - 2 * this.w, y - 2 * this.h);
-        this.gos.forEach(
+        z.ctx.putImageData(z.bgData, x, y);
+        z.ctx.putImageData(z.bgData, x - 2 * z.w, y);
+        z.ctx.putImageData(z.bgData, x, y - 2 * z.h);
+        z.ctx.putImageData(z.bgData, x - 2 * z.w, y - 2 * z.h);
+        z.gos.forEach(
             go => {
                 if (go.draw) {
                     go.draw();
                 }
             }
         )
-        if (this.blob) {
-            this.blob.draw();
+        if (z.blob) {
+            z.blob.draw();
         }
-        this.txts.forEach(
+        z.txts.forEach(
             t => {
                 if (t.draw) {
                     t.draw();
@@ -187,16 +192,17 @@ class Engine {
 
 class Tile {
     constructor(en, i, j) {
-        this.en = en;
-        this.i = i;
-        this.j = j;
-        this.x = i * 2000;
-        this.y = j * 2000;
-        this.k = 0;
-        this.stns = [];
-        this.spks = [];
-        this.cons = [];
-        this.strs = [];
+        let z = this;
+        z.en = en;
+        z.i = i;
+        z.j = j;
+        z.x = i * 2000;
+        z.y = j * 2000;
+        z.k = 0;
+        z.stns = [];
+        z.spks = [];
+        z.cons = [];
+        z.strs = [];
     }
 
     rx() {
@@ -212,7 +218,7 @@ class Tile {
         s.p.x = this.rx();
         s.p.y = this.ry();
         if (this.check(s.p.x, s.p.y)) {
-            s.instantiate();
+            s.inst();
             this.stns.push(s);
         }
     }
@@ -222,7 +228,7 @@ class Tile {
         s.p.x = this.rx();
         s.p.y = this.ry();
         if (this.check(s.p.x, s.p.y)) {
-            s.instantiate();
+            s.inst();
             this.spks.push(s);
         }
     }
@@ -232,7 +238,7 @@ class Tile {
         c.p.x = this.rx();
         c.p.y = this.ry();
         if (this.check(c.p.x, c.p.y)) {
-            c.instantiate();
+            c.inst();
             this.cons.push(c);
         }
     }
@@ -256,7 +262,7 @@ class Tile {
         st.p.y = this.ry();
         if (this.check(st.p.x, st.p.y)) {
             st.dir = mr() * Math.PI * 2;
-            st.instantiate();
+            st.inst();
             this.strs.push(st);
         }
     }
@@ -270,7 +276,7 @@ class Tile {
         return false;
     }
 
-    instantiate() {
+    inst() {
         for (let i = 0; i < 20; i++) {
             this.addStone();
         }
@@ -288,10 +294,10 @@ class Tile {
         }
     }
 
-    destroy() {
+    dstr() {
         let gos = [...this.stns, ...this.spks, ...this.cons, ...this.strs];
         gos.forEach(g => {
-            g.destroy(true);
+            g.dstr(true);
         });
     }
 
@@ -314,11 +320,11 @@ class GameObject {
         this.en = t.en;
     }
 
-    instantiate() {
+    inst() {
         this.en.gos.push(this);
     }
 
-    destroy() {
+    dstr() {
         let i = this.en.gos.indexOf(this);
         if (i !== -1) {
             this.en.gos.splice(i, 1);
@@ -338,11 +344,11 @@ class FloatingText {
         this.dy = mr() * 2;
     }
 
-    instantiate() {
+    inst() {
         this.en.txts.push(this);
     }
 
-    destroy() {
+    dstr() {
         let i = this.en.txts.indexOf(this);
         if (i !== -1) {
             this.en.txts.splice(i, 1);
@@ -365,7 +371,7 @@ class FloatingText {
         ctx.fillText(this.t, x, y);
 
         if (this.k > 60) {
-            this.destroy();
+            this.dstr();
         }
     }
 }
@@ -383,12 +389,12 @@ class Disc extends GameObject {
         this.colorShadow = scaleColor(color, 0.5);
     }
 
-    destroy(frc) {
+    dstr(frc) {
         if (!frc) {
             let dstrydDisc = new DstryDisc(this);
-            dstrydDisc.instantiate();
+            dstrydDisc.inst();
         }
-        super.destroy();
+        super.dstr();
     }
 
     draw() {
@@ -450,14 +456,14 @@ class DstryDisc extends Disc {
         this.p = d.p;
     }
 
-    destroy() {
-        super.destroy(true);
+    dstr() {
+        super.dstr(true);
     }
 
     update() {
         this.r *= 0.8;
         if (this.r < 1) {
-            this.destroy();
+            this.dstr();
         }
     }
 }
@@ -473,17 +479,17 @@ class Structure extends GameObject {
         this.a = 0;
     }
 
-    instantiate() {
+    inst() {
         this.en.gos.push(this);
         this.coins.forEach(c => {
-            c.instantiate();
+            c.inst();
         })
         this.spikes.forEach(s => {
-            s.instantiate();
+            s.inst();
         })
     }
 
-    destroy() {
+    dstr() {
         let i = this.en.gos.indexOf(this);
         if (i !== -1) {
             this.en.gos.splice(i, 1);
@@ -493,10 +499,10 @@ class Structure extends GameObject {
             this.t.strs.splice(i, 1);
         }
         this.coins.forEach(c => {
-            c.destroy();
+            c.dstr();
         })
         this.spikes.forEach(s => {
-            s.destroy();
+            s.dstr();
         })
     }
 
@@ -509,7 +515,7 @@ class Structure extends GameObject {
             }
         })
         if (!alv) {
-            this.destroy();
+            this.dstr();
             return false;
         }
         alv = false;
@@ -519,7 +525,7 @@ class Structure extends GameObject {
             }
         })
         if (!alv) {
-            this.destroy();
+            this.dstr();
             return false;
         }
         return true;
@@ -685,7 +691,7 @@ class Snake extends Structure {
             let d = Math.sqrt(dx * dx + dy * dy);
             dx /= d;
             dy /= d;
-            if (d < 800) {
+            if (d < 250) {
                 this.p.x += dx * 0.5;
                 this.p.y += dy * 0.5;
             }
@@ -723,13 +729,13 @@ class Coin extends Disc {
         this.type = "coin";
     }
 
-    instantiate() {
-        super.instantiate();
+    inst() {
+        super.inst();
         coins.push(this);
     }
 
-    destroy() {
-        super.destroy();
+    dstr() {
+        super.dstr();
         let i = coins.indexOf(this);
         if (i !== -1) {
             coins.splice(i, 1);
@@ -747,8 +753,8 @@ class Spike extends Disc {
         this.type = "spike";
     }
 
-    destroy() {
-        super.destroy();
+    dstr() {
+        super.dstr();
         let i =  this.t.spks.indexOf(this);
         if (i !== -1) {
             this.t.spks.splice(i, 1);
@@ -809,10 +815,10 @@ class Blob {
     constructor(e) {
         let z = this;
         z.en = e;
-        z.combo = 1;
-        z.hpM = 20;
+        z.cbo = 1;
+        z.hpM = 5;
         z.hp = z.hpM;
-        z.springK = 6;
+        z.sk = 6;
         z.mBod = 3;
         z.mNuc = 1;
         z.nFrz = false;
@@ -847,7 +853,7 @@ class Blob {
         rB = Math.max(rB, rN);
 
         z.flk = Math.max(z.flk - 1, 0);
-        let c = lerpColor(cGrn, cBlk, 1 - z.hp / z.hpM);
+        let c = lerpColor(cGrn, cBlk, (1 - z.hp / z.hpM) * 0.9 + 0.1);
         if (z.flk > 0) {
             let co = Math.cos(z.flk * Math.PI * 2 / 60 * 6) * 0.5 + 0.5;
             c = lerpColor(c, "#f8a2a8", co);
@@ -916,7 +922,7 @@ class Blob {
     update() {
         let z = this;
         if (z.hp <= 0) {
-            gameover();
+            gameover(sc);
         }
         if (z.nFrz) {
             z.nT -= 1 / 120;
@@ -927,7 +933,7 @@ class Blob {
         }
 
         if (z.nT < 0) {
-            z.brk;
+            z.brk();
         }
 
         let fBoNX = z.pB.x - z.pN.x;
@@ -939,11 +945,11 @@ class Blob {
             let fNoBX = - fBoNX;
             let fNoBY = - fBoNY;
 
-            z.vN.x += fBoNX * d * z.springK / 60 / z.mNuc;
-            z.vN.y += fBoNY * d * z.springK / 60 / z.mNuc;
+            z.vN.x += fBoNX * d * z.sk / 60 / z.mNuc;
+            z.vN.y += fBoNY * d * z.sk / 60 / z.mNuc;
 
-            z.vB.x += fNoBX * d * z.springK / 60 / z.mBod;
-            z.vB.y += fNoBY * d * z.springK / 60 / z.mBod;
+            z.vB.x += fNoBX * d * z.sk / 60 / z.mBod;
+            z.vB.y += fNoBY * d * z.sk / 60 / z.mBod;
         }
 
         coins = coins.sort((c1, c2) => { 
@@ -982,8 +988,8 @@ class Blob {
                 fAoBX /= dA;
                 fAoBY /= dA;
     
-                z.vB.x += fAoBX * dA * z.springK * 100 / 60 / z.mBod;
-                z.vB.y += fAoBY * dA * z.springK * 100 / 60 / z.mBod;
+                z.vB.x += fAoBX * dA * z.sk * 100 / 60 / z.mBod;
+                z.vB.y += fAoBY * dA * z.sk * 100 / 60 / z.mBod;
             }
         }
 
@@ -1009,8 +1015,8 @@ class Blob {
                     else if (go.type === "spike") {
                         z.flk = 60;
                         z.hp = Math.max(z.hp - go.s, 0);
-                        go.destroy();
-                        z.combo = 1;
+                        go.dstr();
+                        z.cbo = 1;
                     }
                 }
                 let nCollide = go.collide(z.pN.x, z.pN.y, 20);
@@ -1025,19 +1031,19 @@ class Blob {
                         go.bmpg = true;
                     }
                     else if (go.type === "coin") {
-                        sc += go.s * z.combo;
-                        let t = new FloatingText(z.en, "+ " + (go.s * z.combo).toFixed(0));
+                        sc += go.s * z.cbo;
+                        let t = new FloatingText(z.en, "+ " + (go.s * z.cbo).toFixed(0));
                         t.p.x = z.pB.x;
                         t.p.y = z.pB.y;
-                        t.instantiate();
-                        go.destroy();
-                        z.combo += 1;
+                        t.inst();
+                        go.dstr();
+                        z.cbo += 1;
                     }
                     else if (go.type === "spike") {
                         z.flk = 60;
                         z.hp = Math.max(z.hp - go.s, 0);
-                        go.destroy();
-                        z.combo = 1;
+                        go.dstr();
+                        z.cbo = 1;
                     }
                 }
             }
@@ -1059,6 +1065,8 @@ function play() {
         return;
     }
     document.getElementById("play").style.display = "none";
+    document.getElementById("score").style.display = "";
+    sc = 0;
     playing = true;
     let en = new Engine(cw, ch);
     let b = new Blob(en);
@@ -1070,13 +1078,13 @@ function play() {
             requestAnimationFrame(loop);
         }
         else {
-            en.destroy();
+            en.dstr();
         }
     }
     loop();
     en.cnv.addEventListener("pointerdown", (e) => {
         if (b.nT === 1) {
-            b.combo = 1;
+            b.cbo = 1;
             b.pA.x = e.clientX - 9 + en.cX - en.w * 0.5;
             b.pA.y = e.clientY - 9 + en.cY - en.h * 0.5;
             let dx = b.pA.x - b.pB.x;
@@ -1101,16 +1109,41 @@ function play() {
     });
 }
 
-function gameover() {
-    document.getElementById("play").style.display = "";
+function gameready() {
+    let btn = document.getElementById("play");
+    btn.style.display = "";
+    btn.innerText = "PLAY";
+    btn.onpointerup = play;
     playing = false;
+    document.getElementById("score").style.display = "none";
+}
+
+function gameover() {
+    playing = false;
+    document.getElementById("score").style.display = "none";
+    let btn = document.getElementById("play");
+    btn.style.display = "";
+    btn.innerText = "GAME OVER\n" + sc.toFixed(0).padStart(6, "0");
+    let k = 0;
+    let loop = () => {
+        k++;
+        btn.style.opacity = k * k / 180 / 180;
+        if (k < 180) {
+            requestAnimationFrame(loop);
+        }
+        else {
+            btn.style.opacity = 1;
+            btn.onpointerup = gameready;
+        }
+    }
+    loop();
 }
 
 window.addEventListener("load", () => {
     let pBtn = document.getElementById("play");
-    pBtn.style.width = "300px";
-    pBtn.style.left = "200px";
+    pBtn.style.width = "400px";
+    pBtn.style.left = "150px";
     pBtn.style.top = "300px";
     play();
-    requestAnimationFrame(gameover);
+    requestAnimationFrame(gameready);
 })
