@@ -243,6 +243,7 @@ class Tile {
         st.p.x = this.x + mr() * 2000;
         st.p.y = this.y + mr() * 2000;
         st.dir = mr() * Math.PI * 2;
+        st.instantiate();
         this.strs.push(st);
     }
 
