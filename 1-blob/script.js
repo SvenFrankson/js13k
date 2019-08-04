@@ -319,6 +319,14 @@ class Disc extends GameObject {
         this.colorShadow = scaleColor(color, 0.5);
     }
 
+    destroy(frc) {
+        if (!frc) {
+            let dstrydDisc = new DstryDisc(this);
+            dstrydDisc.instantiate();
+        }
+        super.destroy();
+    }
+
     draw() {
         let ctx = this.en.context;
         ctx.lineWidth = 2;
@@ -365,6 +373,26 @@ class Disc extends GameObject {
             let d = Math.sqrt(dd);
             let n = { x: dx / d, y: dy / d}
             return n;
+        }
+    }
+}
+
+class DstryDisc extends Disc {
+
+    constructor(d) {
+        super(d.en, d.s, d.h, d.color);
+        this.type = "dstryd";
+        this.p = d.p;
+    }
+
+    destroy() {
+        super.destroy(true);
+    }
+
+    update() {
+        this.r *= 0.8;
+        if (this.r < 1) {
+            this.destroy();
         }
     }
 }
