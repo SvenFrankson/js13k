@@ -1,8 +1,22 @@
-function scaleColor(hexColor, s) {
-    let o = hexColor.length === 7 ? 1 : 0;
-    let r = mf(parseInt(hexColor.substring(o, o + 2), 16) * s);
-    let g = mf(parseInt(hexColor.substring(o + 2, o + 4), 16) * s);
-    let b = mf(parseInt(hexColor.substring(o + 4, o + 6), 16) * s);
+function scaleColor(hC, s) {
+    let o = hC.length === 7 ? 1 : 0;
+    let r = mf(pi(hC.substring(o, o + 2), 16) * s);
+    let g = mf(pi(hC.substring(o + 2, o + 4), 16) * s);
+    let b = mf(pi(hC.substring(o + 4, o + 6), 16) * s);
+    return (o === 1 ? "#" : "") + r.toString(16).padStart(2, "0") + g.toString(16).padStart(2, "0") + b.toString(16).padStart(2, "0");
+}
+
+function lerpColor(hC1, hC2, d) {
+    let o = hC1.length === 7 ? 1 : 0;
+    let r1 = pi(hC1.substring(o, o + 2), 16);
+    let g1 = pi(hC1.substring(o + 2, o + 4), 16);
+    let b1 = pi(hC1.substring(o + 4, o + 6), 16);
+    let r2 = pi(hC2.substring(o, o + 2), 16);
+    let g2 = pi(hC2.substring(o + 2, o + 4), 16);
+    let b2 = pi(hC2.substring(o + 4, o + 6), 16);
+    let r = mf(r1 * (1 - d) + r2 * d);
+    let g = mf(g1 * (1 - d) + g2 * d);
+    let b = mf(b1 * (1 - d) + b2 * d);
     return (o === 1 ? "#" : "") + r.toString(16).padStart(2, "0") + g.toString(16).padStart(2, "0") + b.toString(16).padStart(2, "0");
 }
 
@@ -10,31 +24,22 @@ var mf = Math.floor;
 var mr = Math.random;
 var mc = Math.cos;
 var ms = Math.sin;
+var pi = parseInt;
 var sc = 0;
 
-/*
-Coral
-#f8a2a8
-Seafoam Green
-#b5eecb
-Purple Haze
-#9589a9
-Cool Gray
-#475250
-*/
 class Engine {
     constructor(w, h) {
         this.cX = 0;
         this.cY = 0;
         this.speed = 1;
-        this.width = w;
+        this.w = w;
         this.height = h;
         this.canvas = document.getElementsByTagName("canvas")[0];
-        this.canvas.width = this.width;
+        this.canvas.width = this.w;
         this.canvas.height = this.height;
         this.context = this.canvas.getContext("2d");
-        this.gameObjects = [];
-        this.texts = [];
+        this.gos = [];
+        this.txts = [];
         this.tiles = [];
 
         let bgC = document.createElement("canvas");
@@ -88,7 +93,7 @@ class Engine {
 
     update() {
         this.updateTiles();
-        this.gameObjects.forEach(
+        this.gos.forEach(
             go => {
                 if (go.update) {
                     go.update();
@@ -98,8 +103,8 @@ class Engine {
         if (this.blob) {
             this.blob.update();
             if (!this.blob.nucFreezing) {
-                let newCX = (this.blob.pNuc.x + this.blob.pBod.x) * 0.5;
-                let newCY = (this.blob.pNuc.y + this.blob.pBod.y) * 0.5;
+                let newCX = (this.blob.pN.x + this.blob.pB.x) * 0.5;
+                let newCY = (this.blob.pN.y + this.blob.pB.y) * 0.5;
                 let dX = newCX - this.cX;
                 if (dX > this.blob.nucTemp * 2) {
                     dX = this.blob.nucTemp * 2;
@@ -123,8 +128,8 @@ class Engine {
 
     updateTiles() {
         if (this.blob) {
-            let I = Math.floor(this.blob.pBod.x / 2000);
-            let J = Math.floor(this.blob.pBod.y / 2000);
+            let I = Math.floor(this.blob.pB.x / 2000);
+            let J = Math.floor(this.blob.pB.y / 2000);
             let newTiles = [];
             let i = 0;
             while (i < this.tiles.length) {
@@ -172,7 +177,7 @@ class Engine {
         this.context.putImageData(this.bgData, x - 2 * this.width, y);
         this.context.putImageData(this.bgData, x, y - 2 * this.height);
         this.context.putImageData(this.bgData, x - 2 * this.width, y - 2 * this.height);
-        this.gameObjects.forEach(
+        this.gos.forEach(
             go => {
                 if (go.draw) {
                     go.draw();
@@ -182,7 +187,7 @@ class Engine {
         if (this.blob) {
             this.blob.draw();
         }
-        this.texts.forEach(
+        this.txts.forEach(
             t => {
                 if (t.draw) {
                     t.draw();
@@ -253,24 +258,24 @@ class Tile {
 
 class GameObject {
     constructor(e) {
-        this.engine = e;
+        this.en = e;
     }
 
     instantiate() {
-        this.engine.gameObjects.push(this);
+        this.en.gos.push(this);
     }
 
     destroy() {
-        let i = this.engine.gameObjects.indexOf(this);
+        let i = this.en.gos.indexOf(this);
         if (i !== -1) {
-            this.engine.gameObjects.splice(i, 1);
+            this.en.gos.splice(i, 1);
         }
     }
 }
 
 class FloatingText {
     constructor(e, t) {
-        this.engine = e;
+        this.en = e;
         this.t = t;
         this.s = 1;
         this.k = 0;
@@ -280,22 +285,22 @@ class FloatingText {
     }
 
     instantiate() {
-        this.engine.texts.push(this);
+        this.en.txts.push(this);
     }
 
     destroy() {
-        let i = this.engine.texts.indexOf(this);
+        let i = this.en.txts.indexOf(this);
         if (i !== -1) {
-            this.engine.texts.splice(i, 1);
+            this.en.txts.splice(i, 1);
         }
     }
 
     draw() {
         this.k++;
         this.s = Math.sin(this.k / 60 * Math.PI) * 20;
-        let ctx = this.engine.context;
-        let oX = this.engine.width * 0.5 - this.engine.cX;
-        let oY = this.engine.height * 0.5 - this.engine.cY;
+        let ctx = this.en.context;
+        let oX = this.e.w * 0.5 - this.en.cX;
+        let oY = this.e.h * 0.5 - this.en.cY;
 
         let x = oX + this.p.x + this.k * this.dx;
         let y = oY + this.p.y - 2 * this.k * this.dy;
@@ -325,20 +330,20 @@ class Disc extends GameObject {
     }
 
     draw() {
-        let ctx = this.engine.context;
+        let ctx = this.en.context;
         ctx.lineWidth = 2;
-        let oX = this.engine.width * 0.5 - this.engine.cX;
-        let oY = this.engine.height * 0.5 - this.engine.cY;
+        let oX = this.e.w * 0.5 - this.en.cX;
+        let oY = this.e.h * 0.5 - this.en.cY;
 
         let x = oX + this.p.x;
         let y = oY + this.p.y;
 
         if (x > - 20 - this.r) {
             if (y > - 20 - this.r) {
-                if (x < this.engine.width + 20 + this.r) {
-                    if (y < this.engine.height + 20 + this.r) {
-                        let dx = this.h - 2 * this.h * x / this.engine.width;
-                        let dy = this.h - 2 * this.h * y / this.engine.height;
+                if (x < this.e.w + 20 + this.r) {
+                    if (y < this.e.h + 20 + this.r) {
+                        let dx = this.h - 2 * this.h * x / this.e.w;
+                        let dy = this.h - 2 * this.h * y / this.e.h;
                         
                         ctx.beginPath();
                         ctx.arc(x + dx, y + dy, this.r, 0, 2 * Math.PI);
@@ -386,7 +391,7 @@ class Structure extends GameObject {
     }
 
     instantiate() {
-        this.engine.gameObjects.push(this);
+        this.en.gos.push(this);
         this.coins.forEach(c => {
             c.instantiate();
         })
@@ -396,9 +401,9 @@ class Structure extends GameObject {
     }
 
     destroy() {
-        let i = this.engine.gameObjects.indexOf(this);
+        let i = this.en.gos.indexOf(this);
         if (i !== -1) {
-            this.engine.gameObjects.splice(i, 1);
+            this.en.gos.splice(i, 1);
         }
         this.coins.forEach(c => {
             c.destroy();
@@ -524,27 +529,6 @@ class Spike extends Disc {
         super(e, r, h, "#f8a2a8");
         this.type = "spike";
     }
-
-    /*
-    draw() {
-        let ctx = this.engine.context;
-        let oX = this.engine.width * 0.5 - this.engine.cX;
-        let oY = this.engine.height * 0.5 - this.engine.cY;
-
-        let x = oX + this.p.x;
-        let y = oY + this.p.y;
-
-        if (x > - 20 - this.r) {
-            if (y > - 20 - this.r) {
-                if (x < this.engine.width + 20 + this.r) {
-                    if (y < this.engine.height + 20 + this.r) {
-                        ctx.drawImage(this.engine.s10C, x - 15, y - 15);
-                    }
-                }
-            }
-        }
-    }
-    */
 }
 
 class Stone extends Disc {
@@ -563,20 +547,20 @@ class Stone extends Disc {
         else {
             this.bump = Math.max(this.bump - 0.5, 0);
         }
-        let ctx = this.engine.context;
+        let ctx = this.en.context;
         ctx.lineWidth = 2;
-        let oX = this.engine.width * 0.5 - this.engine.cX;
-        let oY = this.engine.height * 0.5 - this.engine.cY;
+        let oX = this.e.w * 0.5 - this.en.cX;
+        let oY = this.e.h * 0.5 - this.en.cY;
 
         let x = oX + this.p.x;
         let y = oY + this.p.y;
 
         if (x > - 20 - this.r) {
             if (y > - 20 - this.r) {
-                if (x < this.engine.width + 20 + this.r) {
-                    if (y < this.engine.height + 20 + this.r) {
-                        let dx = this.h - 2 * this.h * x / this.engine.width;
-                        let dy = this.h - 2 * this.h * y / this.engine.height;
+                if (x < this.e.w + 20 + this.r) {
+                    if (y < this.e.h + 20 + this.r) {
+                        let dx = this.h - 2 * this.h * x / this.e.w;
+                        let dy = this.h - 2 * this.h * y / this.e.h;
                         
                         ctx.beginPath();
                         ctx.arc(x + dx, y + dy, this.r + this.bump, 0, 2 * Math.PI);
@@ -597,7 +581,7 @@ class Stone extends Disc {
 class Blob {
 
     constructor(e) {
-        this.engine = e;
+        this.en = e;
         this.combo = 1;
         this.hpM = 20;
         this.hp = this.hpM;
@@ -606,23 +590,23 @@ class Blob {
         this.mNuc = 1;
         this.nucFreezing = false;
         this.nucTemp = 1;
-        this.pNuc = { x: 50, y: 30 };
-        this.vNuc = { x: 0, y: 0 };
-        this.pBod = { x: -50, y: 20 };
-        this.vBod = { x: 0, y: 0 };
-        this.pAnchor = { x: 0, y: 0};
+        this.pN = { x: 50, y: 30 };
+        this.vN = { x: 0, y: 0 };
+        this.pB = { x: -50, y: 20 };
+        this.vB = { x: 0, y: 0 };
+        this.pA = { x: 0, y: 0};
     }
 
     draw() {
-        let ctx = this.engine.context;
-        let oX = this.engine.width * 0.5 - this.engine.cX;
-        let oY = this.engine.height * 0.5 - this.engine.cY;
+        let ctx = this.en.context;
+        let oX = this.e.w * 0.5 - this.en.cX;
+        let oY = this.e.h * 0.5 - this.en.cY;
 
         let rN = 20;
         let rB = 30;
 
-        let dX = this.pBod.x - this.pNuc.x;
-        let dY = this.pBod.y - this.pNuc.y;
+        let dX = this.pB.x - this.pN.x;
+        let dY = this.pB.y - this.pN.y;
         let d = Math.sqrt(dX * dX + dY * dY);
         dX /= d;
         dY /= d;
@@ -633,7 +617,7 @@ class Blob {
         let c = scaleColor("#b5eecb", this.hp / this.hpM);
 
         ctx.beginPath();
-        ctx.arc(oX + this.pBod.x, oY + this.pBod.y, rB + 2, 0, 2 * Math.PI);
+        ctx.arc(oX + this.pB.x, oY + this.pB.y, rB + 2, 0, 2 * Math.PI);
         ctx.fillStyle = c;
         ctx.fill();
 
@@ -642,7 +626,7 @@ class Blob {
             dd = dd * dd;
             let r = rN * dd + rN * 0.5 * (1 - dd);
             ctx.beginPath();
-            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r + 2, 0, 2 * Math.PI);
+            ctx.arc(oX + this.pN.x + dX * i, oY + this.pN.y + dY * i, r + 2, 0, 2 * Math.PI);
             ctx.fill();
         }
 
@@ -651,17 +635,17 @@ class Blob {
             dd = Math.pow(dd, 1.5);
             let r = rN * 0.5 * (1 - dd) + rB * dd;
             ctx.beginPath();
-            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r + 2, 0, 2 * Math.PI);
+            ctx.arc(oX + this.pN.x + dX * i, oY + this.pN.y + dY * i, r + 2, 0, 2 * Math.PI);
             ctx.fill();
         }
 
         ctx.beginPath();
-        ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN + 2, 0, 2 * Math.PI);
+        ctx.arc(oX + this.pN.x, oY + this.pN.y, rN + 2, 0, 2 * Math.PI);
         ctx.fill();
 
         ctx.fillStyle = "#475250";
         ctx.beginPath();
-        ctx.arc(oX + this.pBod.x, oY + this.pBod.y, rB, 0, 2 * Math.PI);
+        ctx.arc(oX + this.pB.x, oY + this.pB.y, rB, 0, 2 * Math.PI);
         ctx.fill();
 
         for (let i = 0; i < d * 0.5; i += 2) {
@@ -669,7 +653,7 @@ class Blob {
             dd = dd * dd;
             let r = rN * dd + rN * 0.5 * (1 - dd);
             ctx.beginPath();
-            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
+            ctx.arc(oX + this.pN.x + dX * i, oY + this.pN.y + dY * i, r, 0, 2 * Math.PI);
             ctx.fill();
         }
 
@@ -678,17 +662,17 @@ class Blob {
             dd = Math.pow(dd, 1.5);
             let r = rN * 0.5 * (1 - dd) + rB * dd;
             ctx.beginPath();
-            ctx.arc(oX + this.pNuc.x + dX * i, oY + this.pNuc.y + dY * i, r, 0, 2 * Math.PI);
+            ctx.arc(oX + this.pN.x + dX * i, oY + this.pN.y + dY * i, r, 0, 2 * Math.PI);
             ctx.fill();
         }
 
         ctx.beginPath();
-        ctx.arc(oX + this.pNuc.x, oY + this.pNuc.y, rN, 0, 2 * Math.PI);
+        ctx.arc(oX + this.pN.x, oY + this.pN.y, rN, 0, 2 * Math.PI);
         ctx.fill();
 
         if (this.nucFreezing) {
             ctx.beginPath();
-            ctx.arc(oX + this.pAnchor.x, oY + this.pAnchor.y, 10, 0, 2 * Math.PI);
+            ctx.arc(oX + this.pA.x, oY + this.pA.y, 10, 0, 2 * Math.PI);
             ctx.fillStyle = "red";
             ctx.fill();
         }
@@ -708,8 +692,8 @@ class Blob {
             this.nucTemp = 0;
         }
 
-        let fBoNX = this.pBod.x - this.pNuc.x;
-        let fBoNY = this.pBod.y - this.pNuc.y;
+        let fBoNX = this.pB.x - this.pN.x;
+        let fBoNY = this.pB.y - this.pN.y;
         let d = Math.sqrt(fBoNX * fBoNX + fBoNY * fBoNY);
         if (d > 0) {
             fBoNX /= d;
@@ -717,29 +701,29 @@ class Blob {
             let fNoBX = - fBoNX;
             let fNoBY = - fBoNY;
 
-            this.vNuc.x += fBoNX * d * this.springK / 60 / this.mNuc;
-            this.vNuc.y += fBoNY * d * this.springK / 60 / this.mNuc;
+            this.vN.x += fBoNX * d * this.springK / 60 / this.mNuc;
+            this.vN.y += fBoNY * d * this.springK / 60 / this.mNuc;
 
-            this.vBod.x += fNoBX * d * this.springK / 60 / this.mBod;
-            this.vBod.y += fNoBY * d * this.springK / 60 / this.mBod;
+            this.vB.x += fNoBX * d * this.springK / 60 / this.mBod;
+            this.vB.y += fNoBY * d * this.springK / 60 / this.mBod;
         }
 
         coins = coins.sort((c1, c2) => { 
-            let dx1 = (c1.p.x - this.pNuc.x);
+            let dx1 = (c1.p.x - this.pN.x);
             dx1 *= dx1;
-            let dy1 = (c1.p.y - this.pNuc.y);
+            let dy1 = (c1.p.y - this.pN.y);
             dy1 *= dy1;
-            let dx2 = (c2.p.x - this.pNuc.x);
+            let dx2 = (c2.p.x - this.pN.x);
             dx2 *= dx2;
-            let dy2 = (c2.p.y - this.pNuc.y);
+            let dy2 = (c2.p.y - this.pN.y);
             dy2 *= dy2;
             return (dx1 + dy1) - (dx2 + dy2);
         })
 
         let cC = coins[0];
         if (cC) {
-            let fCoNX = cC.p.x - this.pNuc.x;
-            let fCoNY = cC.p.y - this.pNuc.y;
+            let fCoNX = cC.p.x - this.pN.x;
+            let fCoNY = cC.p.y - this.pN.y;
             let d = Math.sqrt(fCoNX * fCoNX + fCoNY * fCoNY);
             if (d > 0) {
                 fCoNX /= d;
@@ -747,45 +731,45 @@ class Blob {
                 let g = (100 / (d / 100) / (d / 100));
                 fCoNX *= g / 60 / this.mNuc;
                 fCoNY *= g / 60 / this.mNuc;
-                this.vNuc.x += fCoNX;
-                this.vNuc.y += fCoNY;
+                this.vN.x += fCoNX;
+                this.vN.y += fCoNY;
             }
         }
 
         if (this.nucFreezing) {
-            let fAoBX = this.pAnchor.x - this.pBod.x;
-            let fAoBY = this.pAnchor.y - this.pBod.y;
+            let fAoBX = this.pA.x - this.pB.x;
+            let fAoBY = this.pA.y - this.pB.y;
             let dA = Math.sqrt(fAoBX * fAoBX + fAoBY * fAoBY);
             if (dA > 0) {
                 fAoBX /= dA;
                 fAoBY /= dA;
     
-                this.vBod.x += fAoBX * dA * this.springK * 100 / 60 / this.mBod;
-                this.vBod.y += fAoBY * dA * this.springK * 100 / 60 / this.mBod;
+                this.vB.x += fAoBX * dA * this.springK * 100 / 60 / this.mBod;
+                this.vB.y += fAoBY * dA * this.springK * 100 / 60 / this.mBod;
             }
         }
 
-        this.vNuc.x *= 0.99 * this.nucTemp;
-        this.vNuc.y *= 0.99 * this.nucTemp;
-        this.vBod.x *= 0.9925 * (0.8 + (this.nucFreezing ? 0 : 0.2));
-        this.vBod.y *= 0.9925 * (0.8 + (this.nucFreezing ? 0 : 0.2));
+        this.vN.x *= 0.99 * this.nucTemp;
+        this.vN.y *= 0.99 * this.nucTemp;
+        this.vB.x *= 0.9925 * (0.8 + (this.nucFreezing ? 0 : 0.2));
+        this.vB.y *= 0.9925 * (0.8 + (this.nucFreezing ? 0 : 0.2));
 
-        for (let i = 0; i < this.engine.gameObjects.length; i++) {
-            let go = this.engine.gameObjects[i];
+        for (let i = 0; i < this.en.gos.length; i++) {
+            let go = this.en.gos[i];
             if (go.collide) {
-                let bCollide = go.collide(this.pBod.x, this.pBod.y, 30);
+                let bCollide = go.collide(this.pB.x, this.pB.y, 30);
                 if (bCollide) {
                     if (go.type === "stone") {
-                        let nB = go.collisionNormal(this.pBod.x, this.pBod.y, 30);
-                        let dn = this.vBod.x * nB.x + this.vBod.y * nB.y;
-                        this.pBod.x = go.p.x + nB.x * (30 + go.r + 1);
-                        this.pBod.y = go.p.y + nB.y * (30 + go.r + 1);
-                        this.vBod.x -= 2 * dn * nB.x;
-                        this.vBod.y -= 2 * dn * nB.y;
+                        let nB = go.collisionNormal(this.pB.x, this.pB.y, 30);
+                        let dn = this.vB.x * nB.x + this.vB.y * nB.y;
+                        this.pB.x = go.p.x + nB.x * (30 + go.r + 1);
+                        this.pB.y = go.p.y + nB.y * (30 + go.r + 1);
+                        this.vB.x -= 2 * dn * nB.x;
+                        this.vB.y -= 2 * dn * nB.y;
                         go.bumping = true;
-                        let t = new FloatingText(this.engine, "BUMP !");
-                        t.p.x = this.pBod.x;
-                        t.p.y = this.pBod.y;
+                        let t = new FloatingText(this.en, "BUMP !");
+                        t.p.x = this.pB.x;
+                        t.p.y = this.pB.y;
                         t.instantiate();
                     }
                     else if (go.type === "spike") {
@@ -794,26 +778,26 @@ class Blob {
                         this.combo = 1;
                     }
                 }
-                let nCollide = go.collide(this.pNuc.x, this.pNuc.y, 20);
+                let nCollide = go.collide(this.pN.x, this.pN.y, 20);
                 if (nCollide) {
                     if (go.type === "stone") {
-                        let nN = go.collisionNormal(this.pNuc.x, this.pNuc.y, 20);
-                        let dn = this.vNuc.x * nN.x + this.vNuc.y * nN.y;
-                        this.pNuc.x = go.p.x + nN.x * (20 + go.r + 1);
-                        this.pNuc.y = go.p.y + nN.y * (20 + go.r + 1);
-                        this.vNuc.x -= 2 * dn * nN.x;
-                        this.vNuc.y -= 2 * dn * nN.y;
+                        let nN = go.collisionNormal(this.pN.x, this.pN.y, 20);
+                        let dn = this.vN.x * nN.x + this.vN.y * nN.y;
+                        this.pN.x = go.p.x + nN.x * (20 + go.r + 1);
+                        this.pN.y = go.p.y + nN.y * (20 + go.r + 1);
+                        this.vN.x -= 2 * dn * nN.x;
+                        this.vN.y -= 2 * dn * nN.y;
                         go.bumping = true;
-                        let t = new FloatingText(this.engine, "BUMP !");
-                        t.p.x = this.pNuc.x;
-                        t.p.y = this.pNuc.y;
+                        let t = new FloatingText(this.en, "BUMP !");
+                        t.p.x = this.pN.x;
+                        t.p.y = this.pN.y;
                         t.instantiate();
                     }
                     else if (go.type === "coin") {
                         sc += go.s * this.combo;
-                        let t = new FloatingText(this.engine, "+ " + (go.s * this.combo).toFixed(0));
-                        t.p.x = this.pBod.x;
-                        t.p.y = this.pBod.y;
+                        let t = new FloatingText(this.en, "+ " + (go.s * this.combo).toFixed(0));
+                        t.p.x = this.pB.x;
+                        t.p.y = this.pB.y;
                         t.instantiate();
                         this.hp = Math.min(this.hp + go.s, this.hpM);
                         go.destroy();
@@ -828,40 +812,40 @@ class Blob {
             }
         }
 
-        this.pNuc.x += this.vNuc.x / 60;
-        this.pNuc.y += this.vNuc.y / 60;
+        this.pN.x += this.vN.x / 60;
+        this.pN.y += this.vN.y / 60;
 
-        this.pBod.x += this.vBod.x / 60;
-        this.pBod.y += this.vBod.y / 60;
+        this.pB.x += this.vB.x / 60;
+        this.pB.y += this.vB.y / 60;
     }
 }
 
 window.addEventListener("load", () => {
-    let eng = new Engine(700, 700);
-    let b = new Blob(eng);
-    eng.blob = b;
+    let en = new Engine(700, 700);
+    let b = new Blob(en);
+    en.blob = b;
     let loop = () => {
-        eng.update();
-        eng.draw();
+        en.update();
+        en.draw();
         requestAnimationFrame(loop);
     }
     loop();
-    eng.canvas.addEventListener("pointerdown", (e) => {
+    en.canvas.addEventListener("pointerdown", (e) => {
         if (b.nucTemp === 1) {
             b.combo = 1;
             b.nucFreezing = true;
-            b.pAnchor.x = e.clientX - 9 + eng.cX - eng.width * 0.5;
-            b.pAnchor.y = e.clientY - 9 + eng.cY - eng.height * 0.5;
+            b.pA.x = e.clientX - 9 + en.cX - e.w * 0.5;
+            b.pA.y = e.clientY - 9 + en.cY - e.h * 0.5;
         }
     });
-    eng.canvas.addEventListener("pointermove", (e) => {
+    en.canvas.addEventListener("pointermove", (e) => {
         if (!b.nucFreezing) {
             return;
         }
-        b.pAnchor.x = e.clientX - 9 + eng.cX - eng.width * 0.5;   
-        b.pAnchor.y = e.clientY - 9 + eng.cY - eng.height * 0.5;
+        b.pA.x = e.clientX - 9 + en.cX - e.w * 0.5;   
+        b.pA.y = e.clientY - 9 + en.cY - e.h * 0.5;
     });
-    eng.canvas.addEventListener("pointerup", (e) => {
+    en.canvas.addEventListener("pointerup", (e) => {
         if (!b.nucFreezing) {
             return;
         }
