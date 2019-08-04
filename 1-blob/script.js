@@ -26,6 +26,9 @@ var mc = Math.cos;
 var ms = Math.sin;
 var pi = parseInt;
 var sc = 0;
+var cBlk = "#475250";
+var cLBlk = "#556663";
+var cGrn = "#b5eecb";
 
 class Engine {
     constructor(w, h) {
@@ -33,10 +36,10 @@ class Engine {
         this.cY = 0;
         this.speed = 1;
         this.w = w;
-        this.height = h;
+        this.h = h;
         this.canvas = document.getElementsByTagName("canvas")[0];
         this.canvas.width = this.w;
-        this.canvas.height = this.height;
+        this.canvas.height = this.h;
         this.context = this.canvas.getContext("2d");
         this.gos = [];
         this.txts = [];
@@ -46,7 +49,7 @@ class Engine {
         bgC.width = 2 * w;
         bgC.height = 2 * h;
         let bgCtx = bgC.getContext("2d");
-        bgCtx.fillStyle = "#475250";
+        bgCtx.fillStyle = cBlk;
         bgCtx.fillRect(0, 0, 2 * w, 2 * h);
         for (let i = 0; i < 20; i++) {
             bgCtx.lineWidth = 1;
@@ -57,38 +60,12 @@ class Engine {
                 for (let jj = -1; jj <= 1; jj++) {
                     bgCtx.beginPath();
                     bgCtx.arc(ii * 2 * w + x, jj * 2 * h + y, r, 0, 2 * Math.PI);
-                    bgCtx.strokeStyle = "#556663";
+                    bgCtx.strokeStyle = cLBlk;
                     bgCtx.stroke();
                 }
             }
         }
         this.bgData = bgCtx.getImageData(0, 0, 2 * w, 2 * h);
-
-        this.s10C = document.createElement("canvas");
-        this.s10C.width = 30;
-        this.s10C.height = 30;
-        let s10Ctx = this.s10C.getContext("2d");
-        s10Ctx.fillStyle = "red";
-        s10Ctx.beginPath();
-        s10Ctx.arc(15, 15, 10, 0, 2 * Math.PI);
-        s10Ctx.fill();
-        let sCount = 6 + mf(3 * mr());
-        for (let i = 0; i < sCount; i++) {
-            let a = i * 2 * Math.PI / sCount + mr() * Math.PI / 12;
-            let cosam = Math.cos(a - Math.PI / 8);
-            let sinam = Math.sin(a - Math.PI / 8);
-            let cosa = Math.cos(a);
-            let sina = Math.sin(a);
-            let cosap = Math.cos(a + Math.PI / 8);
-            let sinap = Math.sin(a + Math.PI / 8);
-            s10Ctx.beginPath();
-            s10Ctx.moveTo(cosam * 10 + 15, sinam * 10 + 15);
-            s10Ctx.lineTo(cosa * 15 + 15, sina * 15 + 15);
-            s10Ctx.lineTo(cosap * 10 + 15, sinap * 10 + 15);
-            s10Ctx.lineTo(cosam * 10 + 15, sinam * 10 + 15);
-            s10Ctx.fillStyle = "red";
-            s10Ctx.fill();
-        }
     }
 
     update() {
@@ -161,22 +138,22 @@ class Engine {
     draw() {
         let x = - this.cX;
         while (x < 0) {
-            x += 2 * this.width;
+            x += 2 * this.w;
         }
-        while (x > 2 * this.width) {
-            x -= 2 * this.width;
+        while (x > 2 * this.w) {
+            x -= 2 * this.w;
         }
         let y = - this.cY;
         while (y < 0) {
-            y += 2 * this.height;
+            y += 2 * this.h;
         }
-        while (y > 2 * this.height) {
-            y -= 2 * this.height;
+        while (y > 2 * this.h) {
+            y -= 2 * this.h;
         }
         this.context.putImageData(this.bgData, x, y);
-        this.context.putImageData(this.bgData, x - 2 * this.width, y);
-        this.context.putImageData(this.bgData, x, y - 2 * this.height);
-        this.context.putImageData(this.bgData, x - 2 * this.width, y - 2 * this.height);
+        this.context.putImageData(this.bgData, x - 2 * this.w, y);
+        this.context.putImageData(this.bgData, x, y - 2 * this.h);
+        this.context.putImageData(this.bgData, x - 2 * this.w, y - 2 * this.h);
         this.gos.forEach(
             go => {
                 if (go.draw) {
@@ -299,8 +276,8 @@ class FloatingText {
         this.k++;
         this.s = Math.sin(this.k / 60 * Math.PI) * 20;
         let ctx = this.en.context;
-        let oX = this.e.w * 0.5 - this.en.cX;
-        let oY = this.e.h * 0.5 - this.en.cY;
+        let oX = this.en.w * 0.5 - this.en.cX;
+        let oY = this.en.h * 0.5 - this.en.cY;
 
         let x = oX + this.p.x + this.k * this.dx;
         let y = oY + this.p.y - 2 * this.k * this.dy;
@@ -332,18 +309,18 @@ class Disc extends GameObject {
     draw() {
         let ctx = this.en.context;
         ctx.lineWidth = 2;
-        let oX = this.e.w * 0.5 - this.en.cX;
-        let oY = this.e.h * 0.5 - this.en.cY;
+        let oX = this.en.w * 0.5 - this.en.cX;
+        let oY = this.en.h * 0.5 - this.en.cY;
 
         let x = oX + this.p.x;
         let y = oY + this.p.y;
 
         if (x > - 20 - this.r) {
             if (y > - 20 - this.r) {
-                if (x < this.e.w + 20 + this.r) {
-                    if (y < this.e.h + 20 + this.r) {
-                        let dx = this.h - 2 * this.h * x / this.e.w;
-                        let dy = this.h - 2 * this.h * y / this.e.h;
+                if (x < this.en.w + 20 + this.r) {
+                    if (y < this.en.h + 20 + this.r) {
+                        let dx = this.h - 2 * this.h * x / this.en.w;
+                        let dy = this.h - 2 * this.h * y / this.en.h;
                         
                         ctx.beginPath();
                         ctx.arc(x + dx, y + dy, this.r, 0, 2 * Math.PI);
@@ -549,18 +526,18 @@ class Stone extends Disc {
         }
         let ctx = this.en.context;
         ctx.lineWidth = 2;
-        let oX = this.e.w * 0.5 - this.en.cX;
-        let oY = this.e.h * 0.5 - this.en.cY;
+        let oX = this.en.w * 0.5 - this.en.cX;
+        let oY = this.en.h * 0.5 - this.en.cY;
 
         let x = oX + this.p.x;
         let y = oY + this.p.y;
 
         if (x > - 20 - this.r) {
             if (y > - 20 - this.r) {
-                if (x < this.e.w + 20 + this.r) {
-                    if (y < this.e.h + 20 + this.r) {
-                        let dx = this.h - 2 * this.h * x / this.e.w;
-                        let dy = this.h - 2 * this.h * y / this.e.h;
+                if (x < this.en.w + 20 + this.r) {
+                    if (y < this.en.h + 20 + this.r) {
+                        let dx = this.h - 2 * this.h * x / this.en.w;
+                        let dy = this.h - 2 * this.h * y / this.en.h;
                         
                         ctx.beginPath();
                         ctx.arc(x + dx, y + dy, this.r + this.bump, 0, 2 * Math.PI);
@@ -599,8 +576,8 @@ class Blob {
 
     draw() {
         let ctx = this.en.context;
-        let oX = this.e.w * 0.5 - this.en.cX;
-        let oY = this.e.h * 0.5 - this.en.cY;
+        let oX = this.en.w * 0.5 - this.en.cX;
+        let oY = this.en.h * 0.5 - this.en.cY;
 
         let rN = 20;
         let rB = 30;
@@ -614,7 +591,7 @@ class Blob {
         rB -= d / 10;
         rB = Math.max(rB, rN);
 
-        let c = scaleColor("#b5eecb", this.hp / this.hpM);
+        let c = lerpColor(cGrn, cBlk, 1 - this.hp / this.hpM);
 
         ctx.beginPath();
         ctx.arc(oX + this.pB.x, oY + this.pB.y, rB + 2, 0, 2 * Math.PI);
@@ -643,7 +620,7 @@ class Blob {
         ctx.arc(oX + this.pN.x, oY + this.pN.y, rN + 2, 0, 2 * Math.PI);
         ctx.fill();
 
-        ctx.fillStyle = "#475250";
+        ctx.fillStyle = cBlk;
         ctx.beginPath();
         ctx.arc(oX + this.pB.x, oY + this.pB.y, rB, 0, 2 * Math.PI);
         ctx.fill();
@@ -773,7 +750,7 @@ class Blob {
                         t.instantiate();
                     }
                     else if (go.type === "spike") {
-                        this.hp = Math.max(this.hp - go.s * 2, 0);
+                        this.hp = Math.max(this.hp - go.s, 0);
                         go.destroy();
                         this.combo = 1;
                     }
@@ -799,12 +776,11 @@ class Blob {
                         t.p.x = this.pB.x;
                         t.p.y = this.pB.y;
                         t.instantiate();
-                        this.hp = Math.min(this.hp + go.s, this.hpM);
                         go.destroy();
                         this.combo += 1;
                     }
                     else if (go.type === "spike") {
-                        this.hp = Math.max(this.hp - go.s * 2, 0);
+                        this.hp = Math.max(this.hp - go.s, 0);
                         go.destroy();
                         this.combo = 1;
                     }
@@ -834,16 +810,16 @@ window.addEventListener("load", () => {
         if (b.nucTemp === 1) {
             b.combo = 1;
             b.nucFreezing = true;
-            b.pA.x = e.clientX - 9 + en.cX - e.w * 0.5;
-            b.pA.y = e.clientY - 9 + en.cY - e.h * 0.5;
+            b.pA.x = e.clientX - 9 + en.cX - en.w * 0.5;
+            b.pA.y = e.clientY - 9 + en.cY - en.h * 0.5;
         }
     });
     en.canvas.addEventListener("pointermove", (e) => {
         if (!b.nucFreezing) {
             return;
         }
-        b.pA.x = e.clientX - 9 + en.cX - e.w * 0.5;   
-        b.pA.y = e.clientY - 9 + en.cY - e.h * 0.5;
+        b.pA.x = e.clientX - 9 + en.cX - en.w * 0.5;   
+        b.pA.y = e.clientY - 9 + en.cY - en.h * 0.5;
     });
     en.canvas.addEventListener("pointerup", (e) => {
         if (!b.nucFreezing) {
