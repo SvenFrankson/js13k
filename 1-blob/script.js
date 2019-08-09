@@ -359,7 +359,7 @@ class FloatingText {
 
     draw() {
         this.k++;
-        this.s = Math.sin(this.k / 60 * Math.PI) * 20;
+        this.s = Math.sin(this.k * deltaTime * Math.PI) * 20;
         let ctx = this.en.ctx;
         let oX = this.en.w * 0.5 - this.en.cX;
         let oY = this.en.h * 0.5 - this.en.cY;
@@ -857,7 +857,7 @@ class Blob {
         z.flk = Math.max(z.flk - 1, 0);
         let c = lerpColor(cGrn, cBlk, (1 - z.hp / z.hpM) * 0.9 + 0.1);
         if (z.flk > 0) {
-            let co = Math.cos(z.flk * Math.PI * 2 / 60 * 6) * 0.5 + 0.5;
+            let co = Math.cos(z.flk * Math.PI * 2 * deltaTime * 6) * 0.5 + 0.5;
             c = lerpColor(c, "#f8a2a8", co);
         }
 
@@ -947,11 +947,11 @@ class Blob {
             let fNoBX = - fBoNX;
             let fNoBY = - fBoNY;
 
-            z.vN.x += fBoNX * d * z.sk / 60 / z.mNuc;
-            z.vN.y += fBoNY * d * z.sk / 60 / z.mNuc;
+            z.vN.x += fBoNX * d * z.sk * deltaTime / z.mNuc;
+            z.vN.y += fBoNY * d * z.sk * deltaTime / z.mNuc;
 
-            z.vB.x += fNoBX * d * z.sk / 60 / z.mBod;
-            z.vB.y += fNoBY * d * z.sk / 60 / z.mBod;
+            z.vB.x += fNoBX * d * z.sk * deltaTime / z.mBod;
+            z.vB.y += fNoBY * d * z.sk * deltaTime / z.mBod;
         }
 
         for (let i = 0; i < coins.length - 1; i++) {
@@ -980,8 +980,8 @@ class Blob {
                 fCoNX /= d;
                 fCoNY /= d;
                 let g = (50 / (d / 100) / (d / 100));
-                fCoNX *= g / 60 / z.mNuc;
-                fCoNY *= g / 60 / z.mNuc;
+                fCoNX *= g * deltaTime / z.mNuc;
+                fCoNY *= g * deltaTime / z.mNuc;
                 z.vN.x += fCoNX;
                 z.vN.y += fCoNY;
             }
@@ -991,19 +991,22 @@ class Blob {
             let fAoBX = z.pA.x - z.pB.x;
             let fAoBY = z.pA.y - z.pB.y;
             let dA = Math.sqrt(fAoBX * fAoBX + fAoBY * fAoBY);
-            if (dA > 0) {
+            if (dA > 150) {
+                z.brk();
+            }
+            else if (dA > 0) {
                 fAoBX /= dA;
                 fAoBY /= dA;
     
-                z.vB.x += fAoBX * dA * z.sk * 100 / 60 / z.mBod;
-                z.vB.y += fAoBY * dA * z.sk * 100 / 60 / z.mBod;
+                z.vB.x += fAoBX * dA * z.sk * 100 * deltaTime / z.mBod;
+                z.vB.y += fAoBY * dA * z.sk * 100 * deltaTime / z.mBod;
             }
         }
 
-        z.vN.x *= 0.991 * z.nT;
-        z.vN.y *= 0.991 * z.nT;
-        z.vB.x *= 0.9935 * (0.8 + (z.nFrz ? 0 : 0.2));
-        z.vB.y *= 0.9935 * (0.8 + (z.nFrz ? 0 : 0.2));
+        z.vN.x *= (0.991 * z.nT) * 0.015 / deltaTime;
+        z.vN.y *= (0.991 * z.nT) * 0.015 / deltaTime;
+        z.vB.x *= (0.9935 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
+        z.vB.y *= (0.9935 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
 
         for (let i = 0; i < z.en.gos.length; i++) {
             let go = z.en.gos[i];
@@ -1056,15 +1059,18 @@ class Blob {
             }
         }
 
-        z.pN.x += z.vN.x / 60;
-        z.pN.y += z.vN.y / 60;
+        z.pN.x += z.vN.x * deltaTime;
+        z.pN.y += z.vN.y * deltaTime;
 
-        z.pB.x += z.vB.x / 60;
-        z.pB.y += z.vB.y / 60;
+        z.pB.x += z.vB.x * deltaTime;
+        z.pB.y += z.vB.y * deltaTime;
     }
 }
 
 var playing = false;
+var tFrame = 0;
+var deltaTime = 0.015;
+var fps = 30;
 function play() {
     if (playing) {
         return;
@@ -1077,7 +1083,14 @@ function play() {
     let en = new Engine(gw, gh);
     let b = new Blob(en);
     en.blob = b;
+    tFrame = performance.now() - 15;
     let loop = () => {
+        let t = performance.now();
+        let deltaTime = (t - tFrame) / 1000;
+        tFrame = t;
+        fps *= 19 / 20;
+        fps += 1 / deltaTime / 20;
+        document.getElementById("fps").innerText = fps.toFixed(1);
         en.update();
         en.draw();
         if (playing) {
