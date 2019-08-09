@@ -917,6 +917,7 @@ class Blob {
     }
 
     brk() {
+        console.log(performance.now() - this.tZero);
         this.nFrz = false;
         this.nT = 0;
     }
@@ -927,23 +928,19 @@ class Blob {
             gameover(sc);
         }
         if (z.nFrz) {
-            z.nT -= 1 / 120;
+            z.nT *= 0.98;
         }
         else {
             z.nT += 1 / 90;
             z.nT = Math.min(z.nT, 1);
         }
-
-        if (z.nT < 0) {
+        if (z.nT < 0.01) {
             z.brk();
         }
 
         let fBoNX = z.pB.x - z.pN.x;
         let fBoNY = z.pB.y - z.pN.y;
         let d = Math.sqrt(fBoNX * fBoNX + fBoNY * fBoNY);
-        if (d > 250 && z.nFrz) {
-            z.brk();
-        }
         if (d > 0) {
             fBoNX /= d;
             fBoNY /= d;
@@ -957,17 +954,22 @@ class Blob {
             z.vB.y += fNoBY * d * z.sk / 60 / z.mBod;
         }
 
-        coins = coins.sort((c1, c2) => { 
-            let dx1 = (c1.p.x - z.pN.x);
+        for (let i = 0; i < coins.length - 1; i++) {
+            let ci = coins[i];
+            let cip = coins[i + 1];
+            let dx1 = (ci.p.x - z.pN.x);
             dx1 *= dx1;
-            let dy1 = (c1.p.y - z.pN.y);
+            let dy1 = (ci.p.y - z.pN.y);
             dy1 *= dy1;
-            let dx2 = (c2.p.x - z.pN.x);
+            let dx2 = (cip.p.x - z.pN.x);
             dx2 *= dx2;
-            let dy2 = (c2.p.y - z.pN.y);
+            let dy2 = (cip.p.y - z.pN.y);
             dy2 *= dy2;
-            return (dx1 + dy1) - (dx2 + dy2);
-        })
+            if ((dx1 + dy1) > (dx2 + dy2)) {
+                coins[i + 1] = ci;
+                coins[i] = cip;
+            }
+        }
 
         let cC = coins[0];
         if (cC) {
@@ -998,10 +1000,10 @@ class Blob {
             }
         }
 
-        z.vN.x *= 0.99 * z.nT;
-        z.vN.y *= 0.99 * z.nT;
-        z.vB.x *= 0.9925 * (0.8 + (z.nFrz ? 0 : 0.2));
-        z.vB.y *= 0.9925 * (0.8 + (z.nFrz ? 0 : 0.2));
+        z.vN.x *= 0.991 * z.nT;
+        z.vN.y *= 0.991 * z.nT;
+        z.vB.x *= 0.9935 * (0.8 + (z.nFrz ? 0 : 0.2));
+        z.vB.y *= 0.9935 * (0.8 + (z.nFrz ? 0 : 0.2));
 
         for (let i = 0; i < z.en.gos.length; i++) {
             let go = z.en.gos[i];
@@ -1095,6 +1097,7 @@ function play() {
             let dy = b.pA.y - b.pB.y;
             if (dx * dx + dy * dy < 60 * 60) {
                 b.nFrz = true;
+                b.tZero = performance.now();
             }
         }
     });
