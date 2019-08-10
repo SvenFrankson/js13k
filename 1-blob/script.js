@@ -34,6 +34,7 @@ var sc = 0;
 var cBlk = "#475250";
 var cLBlk = "#556663";
 var cGrn = "#b5eecb";
+var endLess = false;
 
 class Engine {
     constructor(w, h) {
@@ -82,7 +83,9 @@ class Engine {
     update() {
         let z = this;
         gk++;
-        z.updateTiles();
+        if (endLess) {
+            z.updateTiles();
+        }
         z.gos.forEach(
             go => {
                 if (go.update) {
@@ -271,7 +274,7 @@ class Tile {
 
     check(x, y) {
         if (Math.abs(x - this.en.blob.pB.x) > 200) {
-            if (Math.abs(x - this.en.blob.pB.x) > 200) {
+            if (Math.abs(y - this.en.blob.pB.y) > 200) {
                 return true;
             }
         }
@@ -825,9 +828,9 @@ class Blob {
         z.mNuc = 1;
         z.nFrz = false;
         z.nT = 1;
-        z.pN = { x: 50, y: 30 };
+        z.pN = { x: 0, y: 0 };
         z.vN = { x: 0, y: 0 };
-        z.pB = { x: -50, y: 20 };
+        z.pB = { x: 0, y: 0 };
         z.vB = { x: 0, y: 0 };
         z.pA = { x: 0, y: 0};
         z.flk = 0;
@@ -1003,10 +1006,10 @@ class Blob {
             }
         }
 
-        z.vN.x *= (0.991 * z.nT) * 0.015 / deltaTime;
-        z.vN.y *= (0.991 * z.nT) * 0.015 / deltaTime;
-        z.vB.x *= (0.9935 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
-        z.vB.y *= (0.9935 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
+        z.vN.x *= (0.99 * z.nT) * 0.015 / deltaTime;
+        z.vN.y *= (0.99 * z.nT) * 0.015 / deltaTime;
+        z.vB.x *= (0.9925 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
+        z.vB.y *= (0.9925 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
 
         for (let i = 0; i < z.en.gos.length; i++) {
             let go = z.en.gos[i];
@@ -1071,11 +1074,39 @@ var playing = false;
 var tFrame = 0;
 var deltaTime = 0.015;
 var fps = 30;
-function play() {
+
+function playEndless() {
+    endLess = true;
+    initializePlay();
+}
+
+function playLvl1() {
+    endLess = false;
+    let en = initializePlay();
+    let t = new Tile(en, 0, 0);
+    en.tiles = [t];
+    let c = new Coin(t, 3, 2);
+    c.p.x = 0;
+    c.p.y = - 300;
+    c.inst();
+    t.cons.push(c);
+    let checkLoop = () => {
+        if (t.cons.length === 0) {
+            gameover();
+        }
+        else {
+            requestAnimationFrame(checkLoop);
+        }
+    }
+    checkLoop();
+}
+
+function initializePlay() {
     if (playing) {
         return;
     }
     document.getElementById("play").style.display = "none";
+    document.getElementById("levels").style.display = "none";
     document.getElementById("score").style.display = "";
     sc = 0;
     gk = 0;
@@ -1127,15 +1158,17 @@ function play() {
         }
         b.brk();
     });
+    return en;
 }
 
 function gameready() {
     let btn = document.getElementById("play");
     btn.style.display = "";
     btn.innerText = "PLAY";
-    btn.onpointerup = play;
+    btn.onpointerup = playLvl1;
     playing = false;
     document.getElementById("score").style.display = "none";
+    document.getElementById("levels").style.display = "";
 }
 
 function gameover() {
@@ -1167,13 +1200,17 @@ function resize() {
     let pBtn = document.getElementById("play");
     pBtn.style.width = "400px";
     pBtn.style.left = (gw * 0.5 - 200).toFixed(0) + "px";
-    pBtn.style.top = (gh * 0.5).toFixed(0) + "px";
+    pBtn.style.top = (gh * 0.3).toFixed(0) + "px";
     bLeft = window.innerWidth * 0.5 - gw * 0.5;
+    let pLvls = document.getElementById("levels");
+    pLvls.style.width = "500px";
+    pLvls.style.left = (gw * 0.5 - 250).toFixed(0) + "px";
+    pLvls.style.top = (gh * 0.5).toFixed(0) + "px";
     document.body.style.left = bLeft.toFixed(0) + "px";
 }
 
 window.addEventListener("load", () => {
     resize();
-    play();
+    playEndless();
     requestAnimationFrame(gameready);
 })
