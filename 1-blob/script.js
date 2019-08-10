@@ -1006,10 +1006,10 @@ class Blob {
             }
         }
 
-        z.vN.x *= (0.99 * z.nT) * 0.015 / deltaTime;
-        z.vN.y *= (0.99 * z.nT) * 0.015 / deltaTime;
-        z.vB.x *= (0.9925 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
-        z.vB.y *= (0.9925 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
+        z.vN.x *= (0.992 * z.nT) * 0.015 / deltaTime;
+        z.vN.y *= (0.992 * z.nT) * 0.015 / deltaTime;
+        z.vB.x *= (0.9945 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
+        z.vB.y *= (0.9945 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
 
         for (let i = 0; i < z.en.gos.length; i++) {
             let go = z.en.gos[i];
@@ -1165,10 +1165,11 @@ function gameready() {
     let btn = document.getElementById("play");
     btn.style.display = "";
     btn.innerText = "PLAY";
-    btn.onpointerup = playLvl1;
     playing = false;
     document.getElementById("score").style.display = "none";
     document.getElementById("levels").style.display = "";
+    document.getElementById("lvl1").onpointerup = playLvl1;
+    document.getElementById("lvlendless").onpointerup = playEndless;
 }
 
 function gameover() {
@@ -1205,7 +1206,7 @@ function resize() {
     let pLvls = document.getElementById("levels");
     pLvls.style.width = "500px";
     pLvls.style.left = (gw * 0.5 - 250).toFixed(0) + "px";
-    pLvls.style.top = (gh * 0.5).toFixed(0) + "px";
+    pLvls.style.top = (gh * 0.45).toFixed(0) + "px";
     document.body.style.left = bLeft.toFixed(0) + "px";
 }
 
