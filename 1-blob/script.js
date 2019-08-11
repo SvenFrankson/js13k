@@ -34,6 +34,7 @@ var sc = 0;
 var cBlk = "#475250";
 var cLBlk = "#556663";
 var cGrn = "#b5eecb";
+var cBlu = "#9589a9";
 var endLess = false;
 
 class Engine {
@@ -453,6 +454,70 @@ class Disc extends GameObject {
     }
 }
 
+class AntiDisc extends GameObject {
+    
+    constructor(t, r, h) {
+        super(t);
+        this.type = "antidisc";
+        this.r = r;
+        this.h = h;
+        this.p = { x: 0, y: 0};
+        this.color = cBlu;
+        this.colorShadow = scaleColor(cBlu, 0.5);
+    }
+
+    draw() {
+        let z = this;
+        let ctx = z.en.ctx;
+        ctx.lineWidth = 2;
+        let oX = z.en.w * 0.5 - z.en.cX;
+        let oY = z.en.h * 0.5 - z.en.cY;
+
+        let x = oX + z.p.x;
+        let y = oY + z.p.y;
+
+        if (x > - 20 - z.r) {
+            if (y > - 20 - z.r) {
+                if (x < z.en.w + 20 + z.r) {
+                    if (y < z.en.h + 20 + z.r) {
+                        let dx = z.h - 2 * z.h * x / z.en.w;
+                        let dy = z.h - 2 * z.h * y / z.en.h;
+                        
+                        ctx.beginPath();
+                        ctx.arc(x + dx, y + dy, z.r, 0, 2 * Math.PI);
+                        ctx.strokeStyle = z.colorShadow;
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.arc(x, y, z.r, 0, 2 * Math.PI);
+                        ctx.strokeStyle = z.color;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+    }
+
+    collide(x, y, r) {
+        let dx = this.p.x - x;
+        let dy = this.p.y - y;
+        let dd = dx * dx + dy * dy;
+        let d = Math.sqrt(dd);
+        return d + r > this.r;
+    }
+
+    collisionNormal(x, y, r) {
+        let dx = this.p.x - x;
+        let dy = this.p.y - y;
+        let dd = dx * dx + dy * dy;
+        let d = Math.sqrt(dd);
+        if (d + r > this.r) {
+            let n = { x: dx / d, y: dy / d}
+            return n;
+        }
+    }
+}
+
 class DstryDisc extends Disc {
 
     constructor(d) {
@@ -769,7 +834,7 @@ class Spike extends Disc {
 
 class Stone extends Disc {
     constructor(t, r, h) {
-        super(t, r, h, "#9589a9");
+        super(t, r, h, cBlu);
         this.type = "stone";
         this.bmp = 0;
         this.bmpg = false;
@@ -1025,6 +1090,15 @@ class Blob {
                         z.vB.y -= 2 * dn * nB.y;
                         go.bmpg = true;
                     }
+                    else if (go.type === "antidisc") {
+                        let nN = go.collisionNormal(z.pB.x, z.pB.y, 30);
+                        let dn = z.vN.x * nN.x + z.vN.y * nN.y;
+                        z.pB.x = go.p.x - nN.x * (go.r - 30 - 2);
+                        z.pB.y = go.p.y - nN.y * (go.r - 30 - 2);
+                        z.vB.x -= 2 * dn * nN.x;
+                        z.vB.y -= 2 * dn * nN.y;
+                        go.bmpg = true;
+                    }
                     else if (go.type === "spike") {
                         z.flk = 60;
                         z.hp = Math.max(z.hp - go.s, 0);
@@ -1039,6 +1113,15 @@ class Blob {
                         let dn = z.vN.x * nN.x + z.vN.y * nN.y;
                         z.pN.x = go.p.x + nN.x * (20 + go.r + 1);
                         z.pN.y = go.p.y + nN.y * (20 + go.r + 1);
+                        z.vN.x -= 2 * dn * nN.x;
+                        z.vN.y -= 2 * dn * nN.y;
+                        go.bmpg = true;
+                    }
+                    else if (go.type === "antidisc") {
+                        let nN = go.collisionNormal(z.pN.x, z.pN.y, 20);
+                        let dn = z.vN.x * nN.x + z.vN.y * nN.y;
+                        z.pN.x = go.p.x - nN.x * (go.r - 20 - 2);
+                        z.pN.y = go.p.y - nN.y * (go.r - 20 - 2);
                         z.vN.x -= 2 * dn * nN.x;
                         z.vN.y -= 2 * dn * nN.y;
                         go.bmpg = true;
@@ -1090,6 +1173,8 @@ function playLvl1() {
     c.p.y = - 300;
     c.inst();
     t.cons.push(c);
+    let lim = new AntiDisc(t, 600, 20, "black");
+    lim.inst();
     let checkLoop = () => {
         if (t.cons.length === 0) {
             gameover();
