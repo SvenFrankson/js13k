@@ -503,7 +503,7 @@ class AntiDisc extends GameObject {
         let dy = this.p.y - y;
         let dd = dx * dx + dy * dy;
         let d = Math.sqrt(dd);
-        return d + r > this.r;
+        return d + r >= this.r;
     }
 
     collisionNormal(x, y, r) {
@@ -511,7 +511,7 @@ class AntiDisc extends GameObject {
         let dy = this.p.y - y;
         let dd = dx * dx + dy * dy;
         let d = Math.sqrt(dd);
-        if (d + r > this.r) {
+        if (d + r >= this.r) {
             let n = { x: dx / d, y: dy / d}
             return n;
         }
@@ -888,7 +888,7 @@ class Blob {
         z.cbo = 1;
         z.hpM = 20;
         z.hp = z.hpM;
-        z.sk = 6;
+        z.sk = 5;
         z.mBod = 3;
         z.mNuc = 1;
         z.nFrz = false;
@@ -982,6 +982,20 @@ class Blob {
         ctx.beginPath();
         ctx.arc(oX + z.pN.x, oY + z.pN.y, rN, 0, 2 * Math.PI);
         ctx.fill();
+
+        /*
+        ctx.beginPath();
+        ctx.strokeStyle = "red";
+        ctx.moveTo(oX + z.pN.x, oY + z.pN.y);
+        ctx.lineTo(oX + z.pN.x + z.vN.x * 5, oY + z.pN.y + z.vN.y * 5);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.strokeStyle = "red";
+        ctx.moveTo(oX + z.pB.x, oY + z.pB.y);
+        ctx.lineTo(oX + z.pB.x + z.vB.x * 5, oY + z.pB.y + z.vB.y * 5);
+        ctx.stroke();
+        */
     }
 
     brk() {
@@ -1071,13 +1085,14 @@ class Blob {
             }
         }
 
-        z.vN.x *= (0.992 * z.nT) * 0.015 / deltaTime;
-        z.vN.y *= (0.992 * z.nT) * 0.015 / deltaTime;
-        z.vB.x *= (0.9945 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
-        z.vB.y *= (0.9945 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
+        z.vN.x *= (0.993 * z.nT) * 0.015 / deltaTime;
+        z.vN.y *= (0.993 * z.nT) * 0.015 / deltaTime;
+        z.vB.x *= (0.995 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
+        z.vB.y *= (0.995 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
 
         for (let i = 0; i < z.en.gos.length; i++) {
             let go = z.en.gos[i];
+            let aaa = 2;
             if (go.collide) {
                 let bCollide = go.collide(z.pB.x, z.pB.y, 30);
                 if (bCollide) {
@@ -1093,11 +1108,14 @@ class Blob {
                     else if (go.type === "antidisc") {
                         let nN = go.collisionNormal(z.pB.x, z.pB.y, 30);
                         let dn = z.vN.x * nN.x + z.vN.y * nN.y;
-                        z.pB.x = go.p.x - nN.x * (go.r - 30 - 2);
-                        z.pB.y = go.p.y - nN.y * (go.r - 30 - 2);
+                        z.pB.x = go.p.x - nN.x * (go.r - 30 - aaa);
+                        z.pB.y = go.p.y - nN.y * (go.r - 30 - aaa);
                         z.vB.x -= 2 * dn * nN.x;
+                        z.vB.x *= 0.9;
                         z.vB.y -= 2 * dn * nN.y;
+                        z.vB.y *= 0.9;
                         go.bmpg = true;
+                        console.log("BHIT");
                     }
                     else if (go.type === "spike") {
                         z.flk = 60;
@@ -1120,11 +1138,14 @@ class Blob {
                     else if (go.type === "antidisc") {
                         let nN = go.collisionNormal(z.pN.x, z.pN.y, 20);
                         let dn = z.vN.x * nN.x + z.vN.y * nN.y;
-                        z.pN.x = go.p.x - nN.x * (go.r - 20 - 2);
-                        z.pN.y = go.p.y - nN.y * (go.r - 20 - 2);
+                        z.pN.x = go.p.x - nN.x * (go.r - 20 - aaa);
+                        z.pN.y = go.p.y - nN.y * (go.r - 20 - aaa);
                         z.vN.x -= 2 * dn * nN.x;
+                        z.vN.x *= 0.9;
                         z.vN.y -= 2 * dn * nN.y;
+                        z.vN.y *= 0.9;
                         go.bmpg = true;
+                        console.log("NHIT");
                     }
                     else if (go.type === "coin") {
                         sc += go.s * z.cbo;
@@ -1168,11 +1189,45 @@ function playLvl1() {
     let en = initializePlay();
     let t = new Tile(en, 0, 0);
     en.tiles = [t];
-    let c = new Coin(t, 3, 2);
-    c.p.x = 0;
-    c.p.y = - 300;
-    c.inst();
-    t.cons.push(c);
+    for (let i = 0; i < 3; i++) {
+        let c = new Coin(t, 3, 2);
+        c.p.x = mc(i * Math.PI * 2 / 3 - Math.PI / 2) * 300;
+        c.p.y = ms(i * Math.PI * 2 / 3 - Math.PI / 2) * 300;
+        c.inst();
+        t.cons.push(c);
+    }
+    let lim = new AntiDisc(t, 600, 20, "black");
+    lim.inst();
+    let checkLoop = () => {
+        if (t.cons.length === 0) {
+            gameover();
+        }
+        else {
+            requestAnimationFrame(checkLoop);
+        }
+    }
+    checkLoop();
+}
+
+function playLvl2() {
+    endLess = false;
+    let en = initializePlay();
+    let t = new Tile(en, 0, 0);
+    en.tiles = [t];
+    for (let i = 0; i < 3; i++) {
+        let c = new Coin(t, 3, 2);
+        c.p.x = mc(i * Math.PI * 2 / 3 - Math.PI / 2) * 300;
+        c.p.y = ms(i * Math.PI * 2 / 3 - Math.PI / 2) * 300;
+        c.inst();
+        t.cons.push(c);
+    }
+    for (let i = 0; i < 3; i++) {
+        let s = new Spike(t, 3, 2);
+        s.p.x = mc(i * Math.PI * 2 / 3 + Math.PI / 2) * 350;
+        s.p.y = ms(i * Math.PI * 2 / 3 + Math.PI / 2) * 350;
+        s.inst();
+        t.spks.push(s);
+    }
     let lim = new AntiDisc(t, 600, 20, "black");
     lim.inst();
     let checkLoop = () => {
@@ -1254,6 +1309,7 @@ function gameready() {
     document.getElementById("score").style.display = "none";
     document.getElementById("levels").style.display = "";
     document.getElementById("lvl1").onpointerup = playLvl1;
+    document.getElementById("lvl2").onpointerup = playLvl2;
     document.getElementById("lvlendless").onpointerup = playEndless;
 }
 
