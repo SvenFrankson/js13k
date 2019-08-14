@@ -1092,7 +1092,6 @@ class Blob {
 
         for (let i = 0; i < z.en.gos.length; i++) {
             let go = z.en.gos[i];
-            let aaa = 2;
             if (go.collide) {
                 let bCollide = go.collide(z.pB.x, z.pB.y, 30);
                 if (bCollide) {
@@ -1107,9 +1106,9 @@ class Blob {
                     }
                     else if (go.type === "antidisc") {
                         let nN = go.collisionNormal(z.pB.x, z.pB.y, 30);
-                        let dn = z.vN.x * nN.x + z.vN.y * nN.y;
-                        z.pB.x = go.p.x - nN.x * (go.r - 30 - aaa);
-                        z.pB.y = go.p.y - nN.y * (go.r - 30 - aaa);
+                        let dn = z.vB.x * nN.x + z.vB.y * nN.y;
+                        z.pB.x = go.p.x - nN.x * (go.r - 30 - 1);
+                        z.pB.y = go.p.y - nN.y * (go.r - 30 - 1);
                         z.vB.x -= 2 * dn * nN.x;
                         z.vB.x *= 0.9;
                         z.vB.y -= 2 * dn * nN.y;
@@ -1138,8 +1137,8 @@ class Blob {
                     else if (go.type === "antidisc") {
                         let nN = go.collisionNormal(z.pN.x, z.pN.y, 20);
                         let dn = z.vN.x * nN.x + z.vN.y * nN.y;
-                        z.pN.x = go.p.x - nN.x * (go.r - 20 - aaa);
-                        z.pN.y = go.p.y - nN.y * (go.r - 20 - aaa);
+                        z.pN.x = go.p.x - nN.x * (go.r - 20 - 1);
+                        z.pN.y = go.p.y - nN.y * (go.r - 20 - 1);
                         z.vN.x -= 2 * dn * nN.x;
                         z.vN.x *= 0.9;
                         z.vN.y -= 2 * dn * nN.y;
