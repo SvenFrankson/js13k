@@ -1,3 +1,61 @@
+var EngineState;
+(function (EngineState) {
+    EngineState[EngineState["Off"] = 0] = "Off";
+    EngineState[EngineState["Running"] = 1] = "Running";
+    EngineState[EngineState["Paused"] = 2] = "Paused";
+})(EngineState || (EngineState = {}));
+class Engine {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.state = EngineState.Off;
+        this.objects = [];
+        Engine.instance = this;
+    }
+    start() {
+        if (this.state === EngineState.Off) {
+            this.objects.forEach(o => {
+                o.start();
+            });
+            this.state = EngineState.Running;
+        }
+        let loop = () => {
+            if (this.state === EngineState.Running) {
+                this.objects.forEach(o => {
+                    o.update();
+                });
+                if (!this.activeCamera) {
+                    this.activeCamera = this.objects.find(o => { return o instanceof Camera; });
+                }
+                if (this.activeCamera) {
+                    let context = this.canvas.getContext("2d");
+                    context.fillStyle = "black";
+                    context.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.objects.forEach(o => {
+                        o.draw(this.activeCamera, this.canvas);
+                    });
+                }
+            }
+            if (this.state !== EngineState.Off) {
+                requestAnimationFrame(loop);
+            }
+        };
+        loop();
+    }
+    pause() {
+        if (this.state === EngineState.Running) {
+            this.state = EngineState.Paused;
+        }
+        else if (this.state === EngineState.Paused) {
+            this.state = EngineState.Running;
+        }
+    }
+    destroy() {
+        this.state = EngineState.Off;
+        while (this.objects.length > 0) {
+            this.objects[0].destroy();
+        }
+    }
+}
 class V {
     constructor(x = 0, y = 0) {
         this.x = x;
@@ -16,9 +74,10 @@ class V {
     }
 }
 class GameObject {
-    constructor() {
-        this.p = V.N();
-        this.r = 0;
+    constructor(name = "noname", p = V.N(), r = 0) {
+        this.name = name;
+        this.p = p;
+        this.r = r;
     }
     pW() {
         let z = this;
@@ -37,6 +96,19 @@ class GameObject {
             return this.r;
         }
         return parent.rW() + this.r;
+    }
+    instantiate() {
+        let en = Engine.instance;
+        if (en.objects.indexOf(this) === -1) {
+            en.objects.push(this);
+        }
+    }
+    destroy() {
+        let en = Engine.instance;
+        let i = en.objects.indexOf(this);
+        if (i !== -1) {
+            en.objects.splice(i, 1);
+        }
     }
     start() { }
     ;
