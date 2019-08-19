@@ -903,9 +903,6 @@ class Blob {
 
     draw() {
         let z = this;
-        if (!playing) {
-            return;
-        }
         let ctx = z.en.ctx;
         let oX = z.en.w * 0.5 - z.en.cX;
         let oY = z.en.h * 0.5 - z.en.cY;
@@ -1085,10 +1082,10 @@ class Blob {
             }
         }
 
-        z.vN.x *= (0.993 * z.nT) * 0.015 / deltaTime;
-        z.vN.y *= (0.993 * z.nT) * 0.015 / deltaTime;
-        z.vB.x *= (0.995 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
-        z.vB.y *= (0.995 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
+        z.vN.x *= (0.995 * z.nT) * 0.015 / deltaTime;
+        z.vN.y *= (0.995 * z.nT) * 0.015 / deltaTime;
+        z.vB.x *= (0.997 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
+        z.vB.y *= (0.997 * (0.8 + (z.nFrz ? 0 : 0.2))) * 0.015 / deltaTime;
 
         for (let i = 0; i < z.en.gos.length; i++) {
             let go = z.en.gos[i];
@@ -1188,7 +1185,7 @@ function playLvl1() {
     let en = initializePlay();
     let t = new Tile(en, 0, 0);
     en.tiles = [t];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 1; i++) {
         let c = new Coin(t, 3, 2);
         c.p.x = mc(i * Math.PI * 2 / 3 - Math.PI / 2) * 300;
         c.p.y = ms(i * Math.PI * 2 / 3 - Math.PI / 2) * 300;
@@ -1267,11 +1264,37 @@ function initializePlay() {
             requestAnimationFrame(loop);
         }
         else {
-            en.dstr();
+            // Make an exit loop
+            let exitTimeOut = 180;
+            let exitLoop = () => {
+                let t = performance.now();
+                let deltaTime = (t - tFrame) / 1000;
+                tFrame = t;
+                fps *= 19 / 20;
+                fps += 1 / deltaTime / 20;
+                document.getElementById("fps").innerText = fps.toFixed(1);
+                en.update();
+                en.draw();
+                exitTimeOut -= 1;
+                if (exitTimeOut > 0) {
+                    requestAnimationFrame(exitLoop);
+                }
+                else {
+                    console.log("bye");
+                    en.dstr();
+                }
+            }
+            exitLoop();
         }
     }
     loop();
+    en.cnv.removeEventListener("pointerdown", undefined);
+    en.cnv.removeEventListener("pointermove", undefined);
+    en.cnv.removeEventListener("pointerup", undefined);
     en.cnv.addEventListener("pointerdown", (e) => {
+        if (!playing) {
+            return;
+        }
         if (b.nT === 1) {
             b.cbo = 1;
             b.pA.x = e.clientX - bLeft + en.cX - en.w * 0.5;
@@ -1285,6 +1308,9 @@ function initializePlay() {
         }
     });
     en.cnv.addEventListener("pointermove", (e) => {
+        if (!playing) {
+            return;
+        }
         if (!b.nFrz) {
             return;
         }
@@ -1292,6 +1318,9 @@ function initializePlay() {
         b.pA.y = e.clientY - bTop + en.cY - en.h * 0.5;
     });
     en.cnv.addEventListener("pointerup", (e) => {
+        if (!playing) {
+            return;
+        }
         if (!b.nFrz) {
             return;
         }
@@ -1302,11 +1331,11 @@ function initializePlay() {
 
 function gameready() {
     let btn = document.getElementById("play");
-    btn.style.display = "";
     btn.innerText = "PLAY";
+    fade(btn, true);
     playing = false;
-    document.getElementById("score").style.display = "none";
-    document.getElementById("levels").style.display = "";
+    fade(document.getElementById("score"));
+    fade(document.getElementById("levels"), true);
     document.getElementById("lvl1").onpointerup = playLvl1;
     document.getElementById("lvl2").onpointerup = playLvl2;
     document.getElementById("lvlendless").onpointerup = playEndless;
@@ -1314,23 +1343,35 @@ function gameready() {
 
 function gameover() {
     playing = false;
-    document.getElementById("score").style.display = "none";
+    fade(document.getElementById("score"));
     let btn = document.getElementById("play");
     btn.style.display = "";
     btn.innerText = "GAME OVER\n" + sc.toFixed(0).padStart(6, "0");
+    fade(btn, true, () => { btn.onpointerup = gameready; });
+}
+ 
+function fade(e, visb, cb) {
     let k = 0;
-    let loop = () => {
+    e.style.display = true;
+    let f = () => {
         k++;
-        btn.style.opacity = k * k / 180 / 180;
-        if (k < 180) {
-            requestAnimationFrame(loop);
+        if (visb) {
+            e.style.opacity = k * k / 180 / 180;    
         }
         else {
-            btn.style.opacity = 1;
-            btn.onpointerup = gameready;
+            e.style.opacity = 1 - k * k / 180 / 180;
+        }
+        if (k < 180) {
+            requestAnimationFrame(f);
+        }
+        else {
+            e.style.display = visb ? "" : "none";
+            if (cb) {
+                cb();
+            }
         }
     }
-    loop();
+    f(e);
 }
 
 function resize() {
