@@ -1,12 +1,20 @@
 class FatArrow extends LineMesh {
     constructor() {
         super(...arguments);
-        this._k = 0;
+        this._target = V.N();
     }
     start() {
         this.lines = [
             new Line("yellow", V.N(-20, -20), V.N(-20, 20), V.N(20, 20), V.N(40, 0), V.N(20, -20), V.N(-20, -20))
         ];
+        this.collider = new SCollider(this, 20);
+    }
+    update() {
+        this.p.x = this.p.x * 0.9 + this._target.x * 0.1;
+        this.p.y = this.p.y * 0.9 + this._target.y * 0.1;
+    }
+    onPointerMove(pW) {
+        pW.copy(this._target);
     }
 }
 class SpaceShip extends LineMesh {
@@ -56,6 +64,57 @@ class AltSpaceShip extends LineMesh {
         this._k++;
     }
 }
+class KeyboardCam extends Camera {
+    constructor() {
+        super(...arguments);
+        this._l = false;
+        this._r = false;
+        this._u = false;
+        this._d = false;
+    }
+    update() {
+        if (this._l) {
+            this.p.x--;
+        }
+        if (this._r) {
+            this.p.x++;
+        }
+        if (this._d) {
+            this.p.y--;
+        }
+        if (this._u) {
+            this.p.y++;
+        }
+    }
+    onKeyDown(key) {
+        if (key === 37) {
+            this._l = true;
+        }
+        if (key === 39) {
+            this._r = true;
+        }
+        if (key === 38) {
+            this._u = true;
+        }
+        if (key === 40) {
+            this._d = true;
+        }
+    }
+    onKeyUp(key) {
+        if (key === 37) {
+            this._l = false;
+        }
+        if (key === 39) {
+            this._r = false;
+        }
+        if (key === 38) {
+            this._u = false;
+        }
+        if (key === 40) {
+            this._d = false;
+        }
+    }
+}
 window.onload = () => {
     let canvas = document.getElementById("canvas");
     canvas.width = 400;
@@ -63,26 +122,14 @@ window.onload = () => {
     canvas.style.width = "400px";
     canvas.style.height = "400px";
     let en = new Engine(canvas);
-    let camera = new Camera();
+    let camera = new KeyboardCam();
     camera.setW(400, canvas);
-    camera.r = Math.PI / 8;
     camera.instantiate();
+    /*
     let mesh = new AltSpaceShip();
     mesh.instantiate();
+    */
     let pointer = new FatArrow();
     pointer.instantiate();
     en.start();
-    setTimeout(() => {
-        en.pause();
-        setTimeout(() => {
-            en.pause();
-        }, 1000);
-    }, 3000);
-    window.addEventListener("pointerup", (e) => {
-        let b = canvas.getBoundingClientRect();
-        let x = e.clientX - b.left;
-        let y = e.clientY - b.top;
-        pointer.p = camera.pSToPW(V.N(x, y));
-        console.log(pointer.p.x + " " + pointer.p.y);
-    });
 };

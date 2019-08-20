@@ -9,7 +9,13 @@ class Engine {
         this.canvas = canvas;
         this.state = EngineState.Off;
         this.objects = [];
+        this._pntrUp = false;
+        this._pntrMv = false;
+        this._pntrDn = false;
+        this.pntrS = V.N();
+        this.pntrW = V.N();
         Engine.instance = this;
+        this.register();
     }
     start() {
         if (this.state === EngineState.Off) {
@@ -27,6 +33,49 @@ class Engine {
                     this.activeCamera = this.objects.find(o => { return o instanceof Camera; });
                 }
                 if (this.activeCamera) {
+                    if (this._pntrDn || this._pntrMv || this._pntrUp) {
+                        this.pntrW = this.activeCamera.pSToPW(this.pntrS);
+                        let picked = undefined;
+                        let sqrDist = Infinity;
+                        this.objects.forEach(o => {
+                            if (o.collider) {
+                                if (o.collider.containsPW(this.pntrW)) {
+                                    let dd = V.sqrDist(o.p, this.pntrW);
+                                    if (dd < sqrDist) {
+                                        sqrDist = dd;
+                                        picked = o;
+                                    }
+                                }
+                            }
+                        });
+                        if (this._pntrDn) {
+                            this._pntrDn = false;
+                            this.objects.forEach(o => {
+                                o.onPointerDown(this.pntrW);
+                            });
+                            if (picked) {
+                                picked.onPickedDown(this.pntrW);
+                            }
+                        }
+                        if (this._pntrMv) {
+                            this._pntrMv = false;
+                            this.objects.forEach(o => {
+                                o.onPointerMove(this.pntrW);
+                            });
+                            if (picked) {
+                                picked.onPickedMove(this.pntrW);
+                            }
+                        }
+                        if (this._pntrUp) {
+                            this._pntrUp = false;
+                            this.objects.forEach(o => {
+                                o.onPointerUp(this.pntrW);
+                            });
+                            if (picked) {
+                                picked.onPickedUp(this.pntrW);
+                            }
+                        }
+                    }
                     let context = this.canvas.getContext("2d");
                     context.fillStyle = "black";
                     context.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -54,6 +103,42 @@ class Engine {
         while (this.objects.length > 0) {
             this.objects[0].destroy();
         }
+    }
+    register() {
+        this.canvas.addEventListener("pointerdown", e => {
+            console.log("pointerdown");
+            let b = this.canvas.getBoundingClientRect();
+            this._pntrDn = true;
+            this.pntrS.x = e.clientX - b.left;
+            this.pntrS.y = e.clientY - b.top;
+        });
+        this.canvas.addEventListener("pointermove", e => {
+            console.log("pointermove");
+            let b = this.canvas.getBoundingClientRect();
+            this._pntrMv = true;
+            this.pntrS.x = e.clientX - b.left;
+            this.pntrS.y = e.clientY - b.top;
+        });
+        this.canvas.addEventListener("pointerup", e => {
+            console.log("pointerup");
+            let b = this.canvas.getBoundingClientRect();
+            this._pntrUp = true;
+            this.pntrS.x = e.clientX - b.left;
+            this.pntrS.y = e.clientY - b.top;
+        });
+        window.addEventListener("keydown", e => {
+            let k = e.keyCode;
+            console.log("!");
+            this.objects.forEach(o => {
+                o.onKeyDown(k);
+            });
+        });
+        window.addEventListener("keyup", e => {
+            let k = e.keyCode;
+            this.objects.forEach(o => {
+                o.onKeyUp(k);
+            });
+        });
     }
 }
 class V {
@@ -135,11 +220,16 @@ class GameObject {
         }
     }
     start() { }
-    ;
     update() { }
-    ;
     draw(camera, canvas) { }
-    ;
+    onPickedDown(pW) { }
+    onPickedMove(pW) { }
+    onPickedUp(pW) { }
+    onPointerDown(pW) { }
+    onPointerMove(pW) { }
+    onPointerUp(pW) { }
+    onKeyDown(k) { }
+    onKeyUp(k) { }
 }
 class Camera extends GameObject {
     constructor() {
