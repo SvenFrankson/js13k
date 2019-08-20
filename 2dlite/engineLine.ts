@@ -51,22 +51,25 @@ class LineMesh extends GameObject {
                         ((cr * p.x - sr * p.y) * sW + pW.x),
                         ((sr * p.x + cr * p.y) * sW + pW.y)
                     );
-                    let sP = V.N(
+                    /*
+                    let pS = V.N(
                         (cCr * wP.x - sCr * wP.y - pCW.x) / camera.w * canvas.width,
                         (sCr * wP.x + cCr * wP.y - pCW.y) / camera.h * canvas.height
                     )
-                    transformedPoints.push(sP);
+                    */
+                    let pS = camera.pWToPS(wP);
+                    transformedPoints.push(pS);
                 }
                 ctx.beginPath();
                 ctx.moveTo(
-                    canvas.width * 0.5 + transformedPoints[0].x,
-                    canvas.height * 0.5 - transformedPoints[0].y
+                    transformedPoints[0].x,
+                    transformedPoints[0].y
                 )
                 for (let i = 1; i < transformedPoints.length; i++) {
                     let p = transformedPoints[i];
                     ctx.lineTo(
-                        canvas.width * 0.5 + p.x,
-                        canvas.height * 0.5 - p.y
+                        p.x,
+                        p.y
                     );
                 }
                 ctx.strokeStyle = l.color;

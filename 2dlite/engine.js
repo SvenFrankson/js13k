@@ -72,6 +72,21 @@ class V {
         v.y = this.y;
         return v;
     }
+    static sqrDist(v1, v2) {
+        let dx = v2.x - v1.x;
+        let dy = v2.y - v1.y;
+        return dx * dx + dy * dy;
+    }
+}
+class SCollider {
+    constructor(obj, radius = 10) {
+        this.obj = obj;
+        this.radius = radius;
+    }
+    containsPW(p) {
+        let pOW = this.obj.pW();
+        return V.sqrDist(pOW, p) < this.radius * this.radius;
+    }
 }
 class GameObject {
     constructor(name = "noname", p = V.N(), r = 0, s = 1) {
@@ -145,5 +160,23 @@ class Camera extends GameObject {
         if (canvas) {
             z.h = canvas.width / canvas.height * h;
         }
+    }
+    pWToPS(pW) {
+        let canvas = Engine.instance.canvas;
+        let pCW = this.pW();
+        let rCW = this.rW();
+        let cCr = Math.cos(-rCW);
+        let sCr = Math.sin(-rCW);
+        return V.N(canvas.width * 0.5 + (cCr * pW.x - sCr * pW.y - pCW.x) / this.w * canvas.width, canvas.height * 0.5 - (sCr * pW.x + cCr * pW.y - pCW.y) / this.h * canvas.height);
+    }
+    pSToPW(pS) {
+        let canvas = Engine.instance.canvas;
+        let pCW = this.pW();
+        let rCW = this.rW();
+        let cCr = Math.cos(rCW);
+        let sCr = Math.sin(rCW);
+        let x = pS.x / canvas.width * this.w - this.w * 0.5;
+        let y = -pS.y / canvas.height * this.h + this.h * 0.5;
+        return V.N(cCr * x - sCr * y + pCW.x, sCr * x + cCr * y + pCW.y);
     }
 }
