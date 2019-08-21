@@ -1,9 +1,9 @@
 class Line {
-    constructor(color, ...points) {
-        this.color = color;
-        this.points = [];
-        this.color = color;
-        this.points = points;
+    constructor(col, ...points) {
+        this.col = col;
+        this.pts = [];
+        this.col = col;
+        this.pts = points;
     }
     static Parse(s) {
         let sS = s.split(":");
@@ -28,37 +28,34 @@ class LineMesh extends GameObject {
         let ctx = canvas.getContext("2d");
         ctx.lineCap = "round";
         ctx.lineWidth = 2;
-        let pW = this.pW();
-        let rW = this.rW();
-        let sW = this.sW();
+        let pW = this.pW;
+        let rW = this.rW;
+        let sW = this.sW;
         let cr = Math.cos(rW);
         let sr = Math.sin(rW);
-        let pCW = camera.pW();
-        let rCW = camera.rW();
-        let cCr = Math.cos(-rCW);
-        let sCr = Math.sin(-rCW);
         this.lines.forEach(l => {
-            let transformedPoints = [];
-            for (let i = 0; i < l.points.length; i++) {
-                let p = l.points[i];
-                let wP = V.N(((cr * p.x - sr * p.y) * sW + pW.x), ((sr * p.x + cr * p.y) * sW + pW.y));
-                /*
-                let pS = V.N(
-                    (cCr * wP.x - sCr * wP.y - pCW.x) / camera.w * canvas.width,
-                    (sCr * wP.x + cCr * wP.y - pCW.y) / camera.h * canvas.height
-                )
-                */
-                let pS = camera.pWToPS(wP);
-                transformedPoints.push(pS);
+            let ptsS = [];
+            for (let i = 0; i < l.pts.length; i++) {
+                let pt = l.pts[i];
+                let ptW = V.N(((cr * pt.x - sr * pt.y) * sW + pW.x), ((sr * pt.x + cr * pt.y) * sW + pW.y));
+                ptsS.push(camera.pWToPS(ptW));
             }
             ctx.beginPath();
-            ctx.moveTo(transformedPoints[0].x, transformedPoints[0].y);
-            for (let i = 1; i < transformedPoints.length; i++) {
-                let p = transformedPoints[i];
+            ctx.moveTo(ptsS[0].x, ptsS[0].y);
+            for (let i = 1; i < ptsS.length; i++) {
+                let p = ptsS[i];
                 ctx.lineTo(p.x, p.y);
             }
-            ctx.strokeStyle = l.color;
+            ctx.strokeStyle = l.col;
             ctx.stroke();
         });
+    }
+}
+class RectMesh extends LineMesh {
+    constructor(w, h, col = "white") {
+        super("rect");
+        this.w = w;
+        this.h = h;
+        this.lines = [new Line(col, V.N(-w * 0.5, -h * 0.5), V.N(w * 0.5, -h * 0.5), V.N(w * 0.5, h * 0.5), V.N(-w * 0.5, h * 0.5), V.N(-w * 0.5, -h * 0.5))];
     }
 }

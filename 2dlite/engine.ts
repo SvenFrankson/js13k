@@ -40,6 +40,11 @@ class Engine {
                         o.update();
                     }
                 )
+                this.objects.forEach(
+                    o => {
+                        o.updateTransform();
+                    }
+                )
                 if (!this.activeCamera) {
                     this.activeCamera = this.objects.find(o => { return o instanceof Camera; }) as Camera;
                 }
@@ -208,7 +213,7 @@ class SCollider {
     }
 
     public containsPW(p: V): boolean {
-        let pOW: V = this.obj.pW();
+        let pOW: V = this.obj.pW;
         return V.sqrDist(pOW, p) < this.radius * this.radius;
     }
 }
@@ -218,36 +223,32 @@ class GameObject {
     public parent: GameObject;
     public collider: SCollider;
 
-    public pW(): V {
-        let z = this;
-        let parent = z.parent;
-        if (!parent) {
-            return z.p.copy();
-        }
-        let cr = Math.cos(parent.rW());
-        let sr = Math.sin(parent.rW());
-        return V.N(
-            (cr * z.p.x - sr * z.p.y) * parent.sW() + parent.pW().x,
-            (sr * z.p.x + cr * z.p.y) * parent.sW() + parent.pW().y
-        );
-    }
+    public pW: V = V.N();
+    public xW: V = V.N();
+    public yW: V = V.N();
+    public rW: number = 0;
+    public sW: number = 0;
 
-    public rW(): number {
+    public updateTransform(): void {
         let z = this;
         let parent = z.parent;
         if (!parent) {
-            return this.r;
+            z.p.copy(z.pW);
+            z.rW = z.r;
+            z.sW = z.s;
         }
-        return parent.rW() + this.r;
-    }
-
-    public sW(): number {
-        let z = this;
-        let parent = z.parent;
-        if (!parent) {
-            return this.s;
+        else {
+            let cr = Math.cos(parent.rW);
+            let sr = Math.sin(parent.rW);
+            z.pW.x = (cr * z.p.x - sr * z.p.y) * parent.sW + parent.pW.x;
+            z.pW.y = (sr * z.p.x + cr * z.p.y) * parent.sW + parent.pW.y;
+            z.rW = z.r + parent.rW;
+            z.sW = z.s * parent.sW;
         }
-        return parent.sW() * this.s;
+        z.xW.x = Math.cos(this.r);
+        z.xW.y = Math.sin(this.r);
+        z.yW.x = - Math.sin(this.r);
+        z.yW.y = Math.cos(this.r);
     }
 
     constructor(
@@ -310,21 +311,21 @@ class Camera extends GameObject {
 
     public pWToPS(pW: V): V {
         let canvas = Engine.instance.canvas;
-        let pCW = this.pW();
-        let rCW = this.rW();
+        let pCW = this.pW;
+        let rCW = this.rW;
         let cCr = Math.cos(- rCW);
         let sCr = Math.sin(- rCW);
         return V.N(
-            canvas.width * 0.5 + (cCr * pW.x - sCr * pW.y - pCW.x) / this.w * canvas.width,
-            canvas.height * 0.5 - (sCr * pW.x + cCr * pW.y - pCW.y) / this.h * canvas.height
+            canvas.width * 0.5 + (cCr * (pW.x - pCW.x) - sCr * (pW.y - pCW.y)) / this.w * canvas.width,
+            canvas.height * 0.5 - (sCr * (pW.x - pCW.x) + cCr * (pW.y - pCW.y)) / this.h * canvas.height
         )
     }
     
 
     public pSToPW(pS: V): V {
         let canvas = Engine.instance.canvas;
-        let pCW = this.pW();
-        let rCW = this.rW();
+        let pCW = this.pW;
+        let rCW = this.rW;
         let cCr = Math.cos(rCW);
         let sCr = Math.sin(rCW);
         let x = pS.x / canvas.width * this.w - this.w * 0.5;

@@ -8,8 +8,8 @@ class FatArrow extends LineMesh {
                 "yellow",
                 V.N(- 20, - 20),
                 V.N(- 20, 20),
+                V.N(0, 40),
                 V.N(20, 20),
-                V.N(40, 0),
                 V.N(20, - 20),
                 V.N(- 20, - 20)
             )
@@ -82,19 +82,31 @@ class KeyboardCam extends Camera {
     private _r: boolean = false;
     private _u: boolean = false;
     private _d: boolean = false;
+    private _rP: boolean = false;
+    private _rM: boolean = false;
 
     public update(): void {
         if (this._l) {
-            this.p.x--;
+            this.p.x -= this.xW.x * 2;
+            this.p.y -= this.xW.y * 2;
         }
         if (this._r) {
-            this.p.x++;
+            this.p.x += this.xW.x * 2;
+            this.p.y += this.xW.y * 2;
         }
         if (this._d) {
-            this.p.y--;
+            this.p.x -= this.yW.x * 2;
+            this.p.y -= this.yW.y * 2;
         }
         if (this._u) {
-            this.p.y++;
+            this.p.x += this.yW.x * 2;
+            this.p.y += this.yW.y * 2;
+        }
+        if (this._rP) {
+            this.r += 0.05;
+        }
+        if (this._rM) {
+            this.r -= 0.05;
         }
     }
 
@@ -111,6 +123,12 @@ class KeyboardCam extends Camera {
         if (key === 40) {
             this._d = true;
         }
+        if (key === 65) {
+            this._rP = true;
+        }
+        if (key === 69) {
+            this._rM = true;
+        }
     }
 
     public onKeyUp(key: number): void {
@@ -126,6 +144,12 @@ class KeyboardCam extends Camera {
         if (key === 40) {
             this._d = false;
         }
+        if (key === 65) {
+            this._rP = false;
+        }
+        if (key === 69) {
+            this._rM = false;
+        }
     }
 }
 
@@ -137,12 +161,13 @@ window.onload = () => {
     canvas.style.height = "400px";
     let en = new Engine(canvas);
     let camera = new KeyboardCam();
+    camera.r = 0.8;
     camera.setW(400, canvas);
     camera.instantiate();
-    /*
-    let mesh = new AltSpaceShip();
-    mesh.instantiate();
-    */
+    let center = new RectMesh(50, 50, "red");
+    center.instantiate();
+    let centerOut = new RectMesh(100, 100);
+    centerOut.instantiate();
     let pointer = new FatArrow();
     pointer.instantiate();
     en.start();
