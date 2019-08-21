@@ -10,6 +10,11 @@ class FatArrow extends LineMesh {
         this.collider = new SCollider(this, 20);
     }
     update() {
+        let dir = this._target.sub(this.p);
+        let r = V.dirToR(dir);
+        if (isFinite(r)) {
+            this.r = Angle.lerp(this.r, r, 0.1);
+        }
         this.p.x = this.p.x * 0.9 + this._target.x * 0.1;
         this.p.y = this.p.y * 0.9 + this._target.y * 0.1;
     }

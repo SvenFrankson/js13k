@@ -109,21 +109,18 @@ class Engine {
     }
     register() {
         this.canvas.addEventListener("pointerdown", e => {
-            console.log("pointerdown");
             let b = this.canvas.getBoundingClientRect();
             this._pntrDn = true;
             this.pntrS.x = e.clientX - b.left;
             this.pntrS.y = e.clientY - b.top;
         });
         this.canvas.addEventListener("pointermove", e => {
-            console.log("pointermove");
             let b = this.canvas.getBoundingClientRect();
             this._pntrMv = true;
             this.pntrS.x = e.clientX - b.left;
             this.pntrS.y = e.clientY - b.top;
         });
         this.canvas.addEventListener("pointerup", e => {
-            console.log("pointerup");
             let b = this.canvas.getBoundingClientRect();
             this._pntrUp = true;
             this.pntrS.x = e.clientX - b.left;
@@ -131,7 +128,6 @@ class Engine {
         });
         window.addEventListener("keydown", e => {
             let k = e.keyCode;
-            console.log("!");
             this.objects.forEach(o => {
                 o.onKeyDown(k);
             });
@@ -142,6 +138,22 @@ class Engine {
                 o.onKeyUp(k);
             });
         });
+    }
+}
+class Angle {
+    static lerp(a1, a2, t = 0.5) {
+        while (a2 < a1) {
+            a2 += 2 * Math.PI;
+        }
+        while (a2 - 2 * Math.PI > a1) {
+            a2 -= 2 * Math.PI;
+        }
+        if (a2 < a1 + Math.PI) {
+            return a1 + (a2 - a1) * t;
+        }
+        else {
+            return a1 - (2 * Math.PI - (a2 - a1)) * t;
+        }
     }
 }
 class V {
@@ -160,10 +172,40 @@ class V {
         v.y = this.y;
         return v;
     }
+    sqrLen() {
+        let z = this;
+        return z.x * z.x + z.y * z.y;
+    }
+    len() {
+        return Math.sqrt(this.sqrLen());
+    }
+    add(v) {
+        let z = this;
+        return V.N(z.x + v.x, z.y + v.y);
+    }
+    sub(v) {
+        let z = this;
+        return V.N(z.x - v.x, z.y - v.y);
+    }
+    dot(v) {
+        let z = this;
+        return z.x * v.x + z.y * v.y;
+    }
     static sqrDist(v1, v2) {
         let dx = v2.x - v1.x;
         let dy = v2.y - v1.y;
         return dx * dx + dy * dy;
+    }
+    static angle(v1, v2) {
+        let dot = v1.dot(v2) / v1.len() / v2.len();
+        let a = Math.acos(dot);
+        if (v1.x * v2.y - v1.y * v2.x < 0) {
+            a *= -1;
+        }
+        return a;
+    }
+    static dirToR(v) {
+        return V.angle(V.N(0, 1), v);
     }
 }
 class SCollider {
@@ -182,11 +224,25 @@ class GameObject {
         this.p = p;
         this.r = r;
         this.s = s;
+        this.children = [];
         this.pW = V.N();
         this.xW = V.N();
         this.yW = V.N();
         this.rW = 0;
         this.sW = 0;
+    }
+    get parent() {
+        return this._parent;
+    }
+    set parent(o) {
+        if (this._parent) {
+            let i = this._parent.children.indexOf(this);
+            if (i !== -1) {
+                this.parent.children.splice(i, 1);
+            }
+        }
+        this._parent = o;
+        o.children.push(this);
     }
     updateTransform() {
         let z = this;
@@ -208,6 +264,7 @@ class GameObject {
         z.xW.y = Math.sin(this.r);
         z.yW.x = -Math.sin(this.r);
         z.yW.y = Math.cos(this.r);
+        this.children.forEach(c => { c.updateTransform(); });
     }
     instantiate() {
         let en = Engine.instance;

@@ -135,21 +135,18 @@ class Engine {
 
     public register() {
         this.canvas.addEventListener("pointerdown", e => {
-            console.log("pointerdown");
             let b = this.canvas.getBoundingClientRect();
             this._pntrDn = true;
             this.pntrS.x = e.clientX - b.left;
             this.pntrS.y = e.clientY - b.top;
         })
         this.canvas.addEventListener("pointermove", e => {
-            console.log("pointermove");
             let b = this.canvas.getBoundingClientRect();
             this._pntrMv = true;
             this.pntrS.x = e.clientX - b.left;
             this.pntrS.y = e.clientY - b.top;
         })
         this.canvas.addEventListener("pointerup", e => {
-            console.log("pointerup");
             let b = this.canvas.getBoundingClientRect();
             this._pntrUp = true;
             this.pntrS.x = e.clientX - b.left;
@@ -157,7 +154,6 @@ class Engine {
         })
         window.addEventListener("keydown", e => {
             let k = e.keyCode;
-            console.log("!");
             this.objects.forEach(
                 o => {
                     o.onKeyDown(k);
@@ -172,6 +168,23 @@ class Engine {
                 }
             )
         })
+    }
+}
+
+class Angle {
+    public static lerp(a1: number, a2: number, t: number = 0.5): number {
+        while (a2 < a1) {
+            a2 += 2 * Math.PI;
+        }
+        while (a2 - 2 * Math.PI > a1) {
+            a2 -= 2 * Math.PI;
+        }
+        if (a2 < a1 + Math.PI) {
+            return a1 + (a2 - a1) * t;
+        }
+        else {
+            return a1 - (2 * Math.PI - (a2 - a1)) * t;
+        }
     }
 }
 
@@ -196,10 +209,47 @@ class V {
         return v;
     }
 
+    public sqrLen(): number {
+        let z = this;
+        return z.x * z.x + z.y * z.y;
+    }
+
+    public len(): number {
+        return Math.sqrt(this.sqrLen());
+    }
+
+    public add(v: V): V {
+        let z = this;
+        return V.N(z.x + v.x, z.y + v.y);
+    }
+
+    public sub(v: V): V {
+        let z = this;
+        return V.N(z.x - v.x, z.y - v.y);
+    }
+
+    public dot(v: V): number {
+        let z = this;
+        return z.x * v.x + z.y * v.y;
+    }
+
     public static sqrDist(v1: V, v2: V): number {
         let dx = v2.x - v1.x;
         let dy = v2.y - v1.y;
         return dx * dx + dy * dy;
+    }
+
+    public static angle(v1: V, v2: V): number {
+        let dot = v1.dot(v2) / v1.len() / v2.len();
+        let a = Math.acos(dot);
+        if (v1.x * v2.y - v1.y * v2.x < 0) {
+            a *= -1;
+        }
+        return a;
+    }
+
+    public static dirToR(v: V): number {
+        return V.angle(V.N(0, 1), v);
     }
 }
 
@@ -220,7 +270,21 @@ class SCollider {
 
 class GameObject {
 
-    public parent: GameObject;
+    private _parent: GameObject;
+    public get parent(): GameObject {
+        return this._parent;
+    }
+    public set parent(o: GameObject) {
+        if (this._parent) {
+            let i = this._parent.children.indexOf(this);
+            if (i !== -1) {
+                this.parent.children.splice(i, 1);
+            }
+        }
+        this._parent = o;
+        o.children.push(this);
+    }
+    public children: GameObject[] = [];
     public collider: SCollider;
 
     public pW: V = V.N();
@@ -249,6 +313,7 @@ class GameObject {
         z.xW.y = Math.sin(this.r);
         z.yW.x = - Math.sin(this.r);
         z.yW.y = Math.cos(this.r);
+        this.children.forEach(c => { c.updateTransform(); });
     }
 
     constructor(
