@@ -28,6 +28,7 @@ class Line {
 class LineMesh extends GameObject {
 
     public lines: Line[] = [];
+    public size: number = 5;
     
     public draw(camera: Camera, canvas: HTMLCanvasElement): void {
         let ctx = canvas.getContext("2d");
@@ -40,12 +41,15 @@ class LineMesh extends GameObject {
         let sr = Math.sin(rW);
         this.lines.forEach(
             l => {
+                if (l.pts.length === 0) {
+                    return;
+                }
                 let ptsS: V[] = [];
                 for (let i = 0; i < l.pts.length; i++) {
                     let pt = l.pts[i];
                     let ptW = V.N(
-                        ((cr * pt.x - sr * pt.y) * sW + pW.x),
-                        ((sr * pt.x + cr * pt.y) * sW + pW.y)
+                        ((cr * pt.x - sr * pt.y) * this.size * sW + pW.x),
+                        ((sr * pt.x + cr * pt.y) * this.size * sW + pW.y)
                     );
                     ptsS.push(camera.pWToPS(ptW));
                 }

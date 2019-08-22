@@ -355,6 +355,7 @@ class LineMesh extends GameObject {
     constructor() {
         super(...arguments);
         this.lines = [];
+        this.size = 5;
     }
     draw(camera, canvas) {
         let ctx = canvas.getContext("2d");
@@ -366,10 +367,13 @@ class LineMesh extends GameObject {
         let cr = Math.cos(rW);
         let sr = Math.sin(rW);
         this.lines.forEach(l => {
+            if (l.pts.length === 0) {
+                return;
+            }
             let ptsS = [];
             for (let i = 0; i < l.pts.length; i++) {
                 let pt = l.pts[i];
-                let ptW = V.N(((cr * pt.x - sr * pt.y) * sW + pW.x), ((sr * pt.x + cr * pt.y) * sW + pW.y));
+                let ptW = V.N(((cr * pt.x - sr * pt.y) * this.size * sW + pW.x), ((sr * pt.x + cr * pt.y) * this.size * sW + pW.y));
                 ptsS.push(camera.pWToPS(ptW));
             }
             ctx.beginPath();
@@ -389,6 +393,30 @@ class RectMesh extends LineMesh {
         this.w = w;
         this.h = h;
         this.lines = [new Line(col, V.N(-w * 0.5, -h * 0.5), V.N(w * 0.5, -h * 0.5), V.N(w * 0.5, h * 0.5), V.N(-w * 0.5, h * 0.5), V.N(-w * 0.5, -h * 0.5))];
+    }
+}
+class EditableLine extends LineMesh {
+    start() {
+        this.size = 10;
+        this.lines = [
+            new Line("red")
+        ];
+    }
+    onPointerUp(pW) {
+        this.lines[0].pts.push(V.N(Math.round(pW.x / this.size), Math.round(pW.y / this.size)));
+    }
+}
+class Grid extends LineMesh {
+    start() {
+        this.size = 10;
+        this.lines = [];
+        for (let i = -20; i <= 20; i++) {
+            let hLine = new Line("rgb(32, 64, 64)");
+            hLine.pts = [V.N(-20, i), V.N(20, i)];
+            let vLine = new Line("rgb(32, 64, 64)");
+            vLine.pts = [V.N(i, -20), V.N(i, 20)];
+            this.lines.push(hLine, vLine);
+        }
     }
 }
 class FatArrow extends LineMesh {
@@ -545,14 +573,20 @@ window.onload = () => {
     canvas.style.height = "400px";
     let en = new Engine(canvas);
     let camera = new KeyboardCam();
-    camera.r = 0.8;
+    //camera.r = 0.8;
     camera.setW(400, canvas);
     camera.instantiate();
+    /*
     let center = new RectMesh(50, 50, "red");
     center.instantiate();
     let centerOut = new RectMesh(100, 100);
     centerOut.instantiate();
     let pointer = new FatArrow();
     pointer.instantiate();
+    */
+    let grid = new Grid();
+    grid.instantiate();
+    let drawing = new EditableLine();
+    drawing.instantiate();
     en.start();
 };

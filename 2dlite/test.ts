@@ -1,3 +1,37 @@
+class EditableLine extends LineMesh {
+
+    public start(): void {
+        this.size = 10;
+        this.lines = [
+            new Line("red")
+        ]
+    }
+
+    public onPointerUp(pW: V): void {
+        this.lines[0].pts.push(
+            V.N(
+                Math.round(pW.x / this.size),
+                Math.round(pW.y / this.size)
+            )
+        );
+    }
+}
+
+class Grid extends LineMesh {
+
+    public start(): void {
+        this.size = 10;
+        this.lines = [];
+        for (let i = - 20; i <= 20; i++) {
+            let hLine = new Line("rgb(32, 64, 64)");
+            hLine.pts = [V.N(-20, i), V.N(20, i)];
+            let vLine = new Line("rgb(32, 64, 64)");
+            vLine.pts = [V.N(i, -20), V.N(i, 20)];
+            this.lines.push(hLine, vLine);
+        }
+    }
+}
+
 class FatArrow extends LineMesh {
 
     private _target: V = V.N();
@@ -166,14 +200,20 @@ window.onload = () => {
     canvas.style.height = "400px";
     let en = new Engine(canvas);
     let camera = new KeyboardCam();
-    camera.r = 0.8;
+    //camera.r = 0.8;
     camera.setW(400, canvas);
     camera.instantiate();
+    /*
     let center = new RectMesh(50, 50, "red");
     center.instantiate();
     let centerOut = new RectMesh(100, 100);
     centerOut.instantiate();
     let pointer = new FatArrow();
     pointer.instantiate();
+    */
+    let grid = new Grid();
+    grid.instantiate();
+    let drawing = new EditableLine();
+    drawing.instantiate();
     en.start();
 }
