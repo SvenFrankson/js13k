@@ -242,7 +242,9 @@ class GameObject {
             }
         }
         this._parent = o;
-        o.children.push(this);
+        if (this._parent) {
+            this._parent.children.push(this);
+        }
     }
     updateTransform() {
         let z = this;
@@ -396,14 +398,58 @@ class RectMesh extends LineMesh {
     }
 }
 class EditableLine extends LineMesh {
+    constructor() {
+        super(...arguments);
+        this.currentLineIndex = -1;
+    }
     start() {
         this.size = 10;
-        this.lines = [
-            new Line("red")
-        ];
+        this.lines = [];
+    }
+    pWToLineIndex(pW) {
+        let index = -1;
+        let bestDD = Infinity;
+        this.lines.forEach((l, lIndex) => {
+            l.pts.forEach(p => {
+                let dd = V.sqrDist(pW, p);
+                if (dd < bestDD) {
+                    bestDD = dd;
+                    index = lIndex;
+                }
+            });
+        });
+        return index;
     }
     onPointerUp(pW) {
-        this.lines[0].pts.push(V.N(Math.round(pW.x / this.size), Math.round(pW.y / this.size)));
+        if (pW.sqrLen() > 150 * 150) {
+            return;
+        }
+        if (this.lines.length === 0) {
+            let newLine = new Line("red", V.N(Math.round(pW.x / this.size), Math.round(pW.y / this.size)));
+            this.lines.push(newLine);
+            this.currentLineIndex = 0;
+        }
+        else if (this.currentLineIndex === -1) {
+            this.currentLineIndex = this.pWToLineIndex(pW);
+        }
+        else {
+            this.lines[this.currentLineIndex].pts.push(V.N(Math.round(pW.x / this.size), Math.round(pW.y / this.size)));
+        }
+    }
+}
+class EditableLineNewLineButton extends LineMesh {
+    start() {
+        this.size = 5;
+        this.p = V.N(-180, 180);
+        this.lines = [
+            Line.Parse("blue:-1,-1 -1,1 1,1 1,-1 -1,-1")
+        ];
+        this.collider = new SCollider(this, 5);
+    }
+    onPickedUp() {
+        let newLine = new Line("red");
+        this.target.lines.push(newLine);
+        this.target.currentLineIndex = this.target.lines.length - 1;
     }
 }
 class Grid extends LineMesh {
@@ -567,10 +613,10 @@ class KeyboardCam extends Camera {
 }
 window.onload = () => {
     let canvas = document.getElementById("canvas");
-    canvas.width = 400;
-    canvas.height = 400;
-    canvas.style.width = "400px";
-    canvas.style.height = "400px";
+    canvas.width = 800;
+    canvas.height = 800;
+    canvas.style.width = "800px";
+    canvas.style.height = "800px";
     let en = new Engine(canvas);
     let camera = new KeyboardCam();
     //camera.r = 0.8;
@@ -588,5 +634,8 @@ window.onload = () => {
     grid.instantiate();
     let drawing = new EditableLine();
     drawing.instantiate();
+    let newLineButton = new EditableLineNewLineButton();
+    newLineButton.target = drawing;
+    newLineButton.instantiate();
     en.start();
 };

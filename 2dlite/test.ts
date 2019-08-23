@@ -1,19 +1,79 @@
 class EditableLine extends LineMesh {
 
+    public currentLineIndex: number = -1;
+
     public start(): void {
         this.size = 10;
-        this.lines = [
-            new Line("red")
-        ]
+        this.lines = [];
+    }
+
+    public pWToLineIndex(pW: V): number {
+        let index: number = -1;
+        let bestDD: number = Infinity;
+        this.lines.forEach(
+            (l, lIndex) => {
+                l.pts.forEach(
+                    p => {
+                        let dd = V.sqrDist(pW, p);
+                        if (dd < bestDD) {
+                            bestDD = dd;
+                            index = lIndex;
+                        }
+                    }
+                )
+            }
+        );
+        return index;
     }
 
     public onPointerUp(pW: V): void {
-        this.lines[0].pts.push(
-            V.N(
-                Math.round(pW.x / this.size),
-                Math.round(pW.y / this.size)
-            )
+        if (pW.sqrLen() > 150 * 150) {
+            return;
+        }
+        if (this.lines.length === 0) {
+            let newLine = new Line(
+                "red",
+                V.N(
+                    Math.round(pW.x / this.size),
+                    Math.round(pW.y / this.size)
+                )
+            );
+            this.lines.push(newLine);
+            this.currentLineIndex = 0;
+        }
+        else if (this.currentLineIndex === -1) {
+            this.currentLineIndex = this.pWToLineIndex(pW);
+        }
+        else {
+            this.lines[this.currentLineIndex].pts.push(
+                V.N(
+                    Math.round(pW.x / this.size),
+                    Math.round(pW.y / this.size)
+                )
+            );
+        }
+    }
+}
+
+class EditableLineNewLineButton extends LineMesh {
+
+    public target: EditableLine;
+
+    public start(): void {
+        this.size = 5;
+        this.p = V.N(-180, 180);
+        this.lines = [
+            Line.Parse("blue:-1,-1 -1,1 1,1 1,-1 -1,-1")
+        ];
+        this.collider = new SCollider(this, 5);
+    }
+
+    public onPickedUp(): void {
+        let newLine = new Line(
+            "red"
         );
+        this.target.lines.push(newLine);
+        this.target.currentLineIndex = this.target.lines.length - 1;
     }
 }
 
@@ -194,10 +254,10 @@ class KeyboardCam extends Camera {
 
 window.onload = () => {
     let canvas: HTMLCanvasElement = document.getElementById("canvas") as HTMLCanvasElement;
-    canvas.width = 400;
-    canvas.height = 400;
-    canvas.style.width = "400px";
-    canvas.style.height = "400px";
+    canvas.width = 800;
+    canvas.height = 800;
+    canvas.style.width = "800px";
+    canvas.style.height = "800px";
     let en = new Engine(canvas);
     let camera = new KeyboardCam();
     //camera.r = 0.8;
@@ -215,5 +275,8 @@ window.onload = () => {
     grid.instantiate();
     let drawing = new EditableLine();
     drawing.instantiate();
+    let newLineButton = new EditableLineNewLineButton();
+    newLineButton.target = drawing;
+    newLineButton.instantiate();
     en.start();
 }

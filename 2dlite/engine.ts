@@ -282,7 +282,9 @@ class GameObject {
             }
         }
         this._parent = o;
-        o.children.push(this);
+        if (this._parent) {
+            this._parent.children.push(this);
+        }
     }
     public children: GameObject[] = [];
     public collider: SCollider;
