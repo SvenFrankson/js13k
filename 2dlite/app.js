@@ -187,6 +187,10 @@ class V {
         let z = this;
         return V.N(z.x - v.x, z.y - v.y);
     }
+    mul(f) {
+        let z = this;
+        return V.N(z.x * f, z.y * f);
+    }
     dot(v) {
         let z = this;
         return z.x * v.x + z.y * v.y;
@@ -397,21 +401,119 @@ class RectMesh extends LineMesh {
         this.lines = [new Line(col, V.N(-w * 0.5, -h * 0.5), V.N(w * 0.5, -h * 0.5), V.N(w * 0.5, h * 0.5), V.N(-w * 0.5, h * 0.5), V.N(-w * 0.5, -h * 0.5))];
     }
 }
+class Fighter extends LineMesh {
+    constructor() {
+        super(...arguments);
+        this._speed = 100;
+        this._l = false;
+        this._r = false;
+    }
+    update() {
+        this.p = this.p.add(this.yW.mul(this._speed / 60));
+        if (this._l) {
+            this.r += 0.01;
+        }
+        if (this._r) {
+            this.r -= 0.01;
+        }
+    }
+    onKeyDown(key) {
+        if (key === 37) {
+            this._l = true;
+        }
+        if (key === 39) {
+            this._r = true;
+        }
+    }
+    onKeyUp(key) {
+        if (key === 37) {
+            this._l = false;
+        }
+        if (key === 39) {
+            this._r = false;
+        }
+        if (key === 38) {
+            this._speed += 10;
+            if (this._speed > 200) {
+                this._speed = 200;
+            }
+        }
+        if (key === 40) {
+            this._speed -= 10;
+            if (this._speed < 20) {
+                this._speed = 20;
+            }
+        }
+    }
+    start() {
+        this.size = 5;
+        let line = new Line("white");
+        line.pts = [
+            V.N(1, 8),
+            V.N(2, 4),
+            V.N(2, 2),
+            V.N(4, 2),
+            V.N(4, 6),
+            V.N(5, 6),
+            V.N(5, 2),
+            V.N(14, 1),
+            V.N(15, 0),
+            V.N(14, -1),
+            V.N(6, -2),
+            V.N(2, -2),
+            V.N(1, -14),
+            V.N(3, -14),
+            V.N(4, -15),
+            V.N(4, -16),
+            V.N(1, -16),
+            V.N(1, -17)
+        ];
+        let last = line.pts.length - 1;
+        for (let i = last; i >= 0; i--) {
+            let p = line.pts[i].copy();
+            p.x *= -1;
+            line.pts.push(p);
+        }
+        line.pts.push(line.pts[0].copy());
+        this.lines = [
+            line,
+            Line.Parse("blue:-1,-1 -2,-1 -2,0 -4,0 -2,0 -2,1 -1,1"),
+            Line.Parse("white:-1,0 1,0 0,0 0,-2 0,2"),
+            Line.Parse("red:1,-1 2,-1 2,0 4,0 2,0 2,1 1,1")
+        ];
+    }
+}
 class EditableLine extends LineMesh {
     constructor() {
         super(...arguments);
+        this.colors = [
+            "red",
+            "lime",
+            "blue",
+            "yellow",
+            "cyan",
+            "magenta",
+            "white"
+        ];
+        this.colorIndex = 0;
         this.currentLineIndex = -1;
+        this.currentPointIndex = -1;
+        this.isCreationMode = false;
+        this.isDeletionMode = false;
     }
     start() {
         this.size = 10;
         this.lines = [];
+        this._preview = new LineMesh();
+        this._preview.size = 10;
+        this._preview.instantiate();
     }
     pWToLineIndex(pW) {
         let index = -1;
         let bestDD = Infinity;
         this.lines.forEach((l, lIndex) => {
             l.pts.forEach(p => {
-                let dd = V.sqrDist(pW, p);
+                let dd = V.sqrDist(pW, p.mul(this.size));
                 if (dd < bestDD) {
                     bestDD = dd;
                     index = lIndex;
@@ -420,20 +522,96 @@ class EditableLine extends LineMesh {
         });
         return index;
     }
+    pWToPointIndex(pW, l) {
+        let index = -1;
+        let bestDD = Infinity;
+        l.pts.forEach((p, pIndex) => {
+            let dd = V.sqrDist(pW, p.mul(this.size));
+            if (dd < bestDD) {
+                bestDD = dd;
+                index = pIndex;
+            }
+        });
+        return index;
+    }
+    onPointerDown(pW) {
+        if (!this.isCreationMode && !this.isDeletionMode) {
+            this.currentPointIndex = -1;
+            let currentLine = this.lines[this.currentLineIndex];
+            if (!currentLine) {
+                this.currentLineIndex = this.pWToLineIndex(pW);
+                currentLine = this.lines[this.currentLineIndex];
+            }
+            if (currentLine) {
+                this.currentPointIndex = this.pWToPointIndex(pW, currentLine);
+            }
+        }
+        console.log(this.currentLineIndex + " / " + this.lines.length + " " + this.currentPointIndex);
+    }
+    onPointerMove(pW) {
+        if (this.isCreationMode) {
+            if (pW.sqrLen() < 150 * 150) {
+                let cursor = V.N(Math.round(pW.x / this.size), Math.round(pW.y / this.size));
+                let currentLine = this.lines[this.currentLineIndex];
+                if (currentLine) {
+                    let pt0 = currentLine.pts[currentLine.pts.length - 1];
+                    if (pt0) {
+                        this._preview.lines = [new Line("grey", pt0, cursor)];
+                        return;
+                    }
+                }
+            }
+        }
+        this._hidePreview();
+        if (!this.isCreationMode && !this.isDeletionMode) {
+            let currentLine = this.lines[this.currentLineIndex];
+            if (currentLine) {
+                let currentPoint = currentLine.pts[this.currentPointIndex];
+                if (currentPoint) {
+                    currentPoint.x = Math.round(pW.x / this.size);
+                    currentPoint.y = Math.round(pW.y / this.size);
+                }
+            }
+        }
+    }
+    _hidePreview() {
+        this._preview.lines = [];
+    }
     onPointerUp(pW) {
         if (pW.sqrLen() > 150 * 150) {
             return;
         }
-        if (this.lines.length === 0) {
-            let newLine = new Line("red", V.N(Math.round(pW.x / this.size), Math.round(pW.y / this.size)));
-            this.lines.push(newLine);
-            this.currentLineIndex = 0;
+        if (this.isDeletionMode) {
+            this.isDeletionMode = false;
+            let cursor = V.N(Math.round(pW.x / this.size), Math.round(pW.y / this.size));
+            for (let i = 0; i < this.lines.length; i++) {
+                let l = this.lines[i];
+                for (let j = 0; j < l.pts.length; j++) {
+                    let pt = l.pts[j];
+                    if (pt.x === cursor.x && pt.y === cursor.y) {
+                        this.lines.splice(i, 1);
+                        this.currentLineIndex = -1;
+                        return;
+                    }
+                }
+            }
         }
-        else if (this.currentLineIndex === -1) {
-            this.currentLineIndex = this.pWToLineIndex(pW);
+        else if (this.isCreationMode) {
+            if (this.lines.length === 0) {
+                let newLine = new Line(this.colors[this.colorIndex], V.N(Math.round(pW.x / this.size), Math.round(pW.y / this.size)));
+                this.colorIndex = (this.colorIndex + 1) % this.colors.length;
+                this.lines.push(newLine);
+                this.currentLineIndex = 0;
+            }
+            else if (this.currentLineIndex === -1) {
+                this.currentLineIndex = this.pWToLineIndex(pW);
+            }
+            else {
+                this.lines[this.currentLineIndex].pts.push(V.N(Math.round(pW.x / this.size), Math.round(pW.y / this.size)));
+            }
         }
         else {
-            this.lines[this.currentLineIndex].pts.push(V.N(Math.round(pW.x / this.size), Math.round(pW.y / this.size)));
+            this.currentPointIndex = -1;
         }
     }
 }
@@ -444,23 +622,65 @@ class EditableLineNewLineButton extends LineMesh {
         this.lines = [
             Line.Parse("blue:-1,-1 -1,1 1,1 1,-1 -1,-1")
         ];
+        this._check = Line.Parse("blue:-1,0 1,0 0,0 0,-1 0,1");
         this.collider = new SCollider(this, 5);
     }
+    update() {
+        if (this.target.isCreationMode) {
+            if (this.lines.length < 2) {
+                this.lines.push(this._check);
+            }
+        }
+        else {
+            if (this.lines.length > 1) {
+                this.lines.pop();
+            }
+        }
+    }
     onPickedUp() {
-        let newLine = new Line("red");
-        this.target.lines.push(newLine);
-        this.target.currentLineIndex = this.target.lines.length - 1;
+        this.target.isCreationMode = !this.target.isCreationMode;
+        if (this.target.isCreationMode) {
+            let newLine = new Line(this.target.colors[this.target.colorIndex]);
+            this.target.colorIndex = (this.target.colorIndex + 1) % this.target.colors.length;
+            this.target.lines.push(newLine);
+            this.target.currentLineIndex = this.target.lines.length - 1;
+        }
+    }
+}
+class EditableLineDeleteButton extends LineMesh {
+    start() {
+        this.size = 5;
+        this.p = V.N(-180, 160);
+        this.lines = [
+            Line.Parse("red:-1,-1 -1,1 1,1 1,-1 -1,-1")
+        ];
+        this._check = Line.Parse("red:-1,0 1,0 0,0 0,-1 0,1");
+        this.collider = new SCollider(this, 5);
+    }
+    update() {
+        if (this.target.isDeletionMode) {
+            if (this.lines.length < 2) {
+                this.lines.push(this._check);
+            }
+        }
+        else {
+            if (this.lines.length > 1) {
+                this.lines.pop();
+            }
+        }
+    }
+    onPickedUp() {
+        this.target.isDeletionMode = !this.target.isDeletionMode;
     }
 }
 class Grid extends LineMesh {
     start() {
-        this.size = 10;
         this.lines = [];
-        for (let i = -20; i <= 20; i++) {
+        for (let i = -100; i <= 100; i += 5) {
             let hLine = new Line("rgb(32, 64, 64)");
-            hLine.pts = [V.N(-20, i), V.N(20, i)];
+            hLine.pts = [V.N(-100, i), V.N(100, i)];
             let vLine = new Line("rgb(32, 64, 64)");
-            vLine.pts = [V.N(i, -20), V.N(i, 20)];
+            vLine.pts = [V.N(i, -100), V.N(i, 100)];
             this.lines.push(hLine, vLine);
         }
     }
@@ -489,26 +709,6 @@ class FatArrow extends LineMesh {
         pW.copy(this._target);
     }
 }
-class SpaceShip extends LineMesh {
-    constructor() {
-        super(...arguments);
-        this._k = 0;
-    }
-    start() {
-        this.lines = [
-            Line.Parse("white:-10,-10 -10,10 0,25 10,10 10,-10 -10,-10"),
-            Line.Parse("red:16,-5 16,10 40,0 40,-10 16,-5"),
-            Line.Parse("red:-16,-5 -16,10 -40,0 -40,-10 -16,-5")
-        ];
-    }
-    update() {
-        this.p.x = 100 * Math.cos(this._k / 100);
-        this.p.y = 50 * Math.sin(this._k / 50);
-        this.r = this._k / 60;
-        this.s = 1.5 + Math.sin(this._k / 50);
-        this._k++;
-    }
-}
 class AltSpaceShip extends LineMesh {
     constructor() {
         super(...arguments);
@@ -534,6 +734,16 @@ class AltSpaceShip extends LineMesh {
         this.r = this._k / 60;
         this.s = 1.5 + Math.sin(this._k / 50);
         this._k++;
+    }
+}
+class PlaneCamera extends Camera {
+    constructor(plane) {
+        super("planeCamera");
+        this.plane = plane;
+    }
+    update() {
+        this.p.x = this.p.x * 59 / 60 + this.plane.p.x / 60;
+        this.p.y = this.p.y * 59 / 60 + this.plane.p.y / 60;
     }
 }
 class KeyboardCam extends Camera {
@@ -618,9 +828,14 @@ window.onload = () => {
     canvas.style.width = "800px";
     canvas.style.height = "800px";
     let en = new Engine(canvas);
-    let camera = new KeyboardCam();
+    let grid = new Grid();
+    grid.instantiate();
+    let fighter = new Fighter();
+    fighter.instantiate();
+    let camera = new PlaneCamera(fighter);
+    //let camera = new KeyboardCam();
     //camera.r = 0.8;
-    camera.setW(400, canvas);
+    camera.setW(800, canvas);
     camera.instantiate();
     /*
     let center = new RectMesh(50, 50, "red");
@@ -629,13 +844,14 @@ window.onload = () => {
     centerOut.instantiate();
     let pointer = new FatArrow();
     pointer.instantiate();
-    */
-    let grid = new Grid();
-    grid.instantiate();
     let drawing = new EditableLine();
     drawing.instantiate();
     let newLineButton = new EditableLineNewLineButton();
     newLineButton.target = drawing;
     newLineButton.instantiate();
+    let deleteButton = new EditableLineDeleteButton();
+    deleteButton.target = drawing;
+    deleteButton.instantiate();
+    */
     en.start();
 };

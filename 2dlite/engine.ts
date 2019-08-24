@@ -228,6 +228,11 @@ class V {
         return V.N(z.x - v.x, z.y - v.y);
     }
 
+    public mul(f: number): V {
+        let z = this;
+        return V.N(z.x * f, z.y * f);
+    }
+
     public dot(v: V): number {
         let z = this;
         return z.x * v.x + z.y * v.y;
