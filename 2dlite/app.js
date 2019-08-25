@@ -4,11 +4,13 @@ var EngineState;
     EngineState[EngineState["Running"] = 1] = "Running";
     EngineState[EngineState["Paused"] = 2] = "Paused";
 })(EngineState || (EngineState = {}));
+var dt = 0.15;
 class Engine {
     constructor(canvas) {
         this.canvas = canvas;
         this.state = EngineState.Off;
         this.objects = [];
+        this.destroyTask = [];
         this._pntrUp = false;
         this._pntrMv = false;
         this._pntrDn = false;
@@ -24,11 +26,18 @@ class Engine {
             });
             this.state = EngineState.Running;
         }
+        let t = Date.now();
         let loop = () => {
+            let now = Date.now();
+            dt = Math.min((now - t) / 1000, 1);
+            t = now;
             if (this.state === EngineState.Running) {
                 this.objects.forEach(o => {
                     o.update();
                 });
+                while (this.destroyTask.length > 0) {
+                    this.destroyTask.pop().destroyNow();
+                }
                 this.objects.forEach(o => {
                     o.updateTransform();
                 });
@@ -104,7 +113,7 @@ class Engine {
     destroy() {
         this.state = EngineState.Off;
         while (this.objects.length > 0) {
-            this.objects[0].destroy();
+            this.objects[0].destroyNow();
         }
     }
     register() {
@@ -190,6 +199,10 @@ class V {
     mul(f) {
         let z = this;
         return V.N(z.x * f, z.y * f);
+    }
+    unit() {
+        let l = this.len();
+        return V.N(this.x / l, this.y / l);
     }
     dot(v) {
         let z = this;
@@ -277,13 +290,25 @@ class GameObject {
         if (en.objects.indexOf(this) === -1) {
             en.objects.push(this);
         }
+        if (en.state === EngineState.Running) {
+            this.start();
+        }
     }
     destroy() {
+        Engine.instance.destroyTask.push(this);
+    }
+    destroyNow() {
         let en = Engine.instance;
         let i = en.objects.indexOf(this);
         if (i !== -1) {
             en.objects.splice(i, 1);
         }
+    }
+    pLToPW(pL) {
+        let z = this;
+        let cr = Math.cos(z.rW);
+        let sr = Math.sin(z.rW);
+        return V.N(((cr * pL.x - sr * pL.y) * z.sW + z.pW.x), ((sr * pL.x + cr * pL.y) * z.sW + z.pW.y));
     }
     start() { }
     update() { }
@@ -404,18 +429,45 @@ class RectMesh extends LineMesh {
 class Fighter extends LineMesh {
     constructor() {
         super(...arguments);
-        this._speed = 100;
+        this.speed = V.N();
+        this.cX = 0.005;
+        this.cY = 0.0001;
+        this._rSpeed = 0;
+        this.cR = 2;
+        this._thrust = 10;
         this._l = false;
         this._r = false;
+        this._u = false;
+        this._d = false;
     }
     update() {
-        this.p = this.p.add(this.yW.mul(this._speed / 60));
+        if (this._u) {
+            this._thrust += 10 * dt;
+            this._thrust = Math.min(this._thrust, 100);
+        }
+        if (this._d) {
+            this._thrust -= 20 * dt;
+            this._thrust = Math.max(this._thrust, 10);
+        }
         if (this._l) {
-            this.r += 0.01;
+            this._rSpeed += Math.PI * 0.5 * dt;
+            this._rSpeed = Math.min(this._rSpeed, Math.PI * 0.5);
         }
         if (this._r) {
-            this.r -= 0.01;
+            this._rSpeed -= Math.PI * 0.5 * dt;
+            this._rSpeed = Math.max(this._rSpeed, -Math.PI * 0.5);
         }
+        console.log(this._thrust.toFixed(0) + " " + (this._rSpeed / (Math.PI * 2)).toFixed(2));
+        let sX = this.speed.dot(this.xW);
+        let sY = this.speed.dot(this.yW);
+        let fX = this.xW.mul(-sX * Math.abs(sX) * this.cX);
+        let fY = this.yW.mul(-sY * Math.abs(sY) * this.cY);
+        this.speed = this.speed.add(this.yW.mul(this._thrust * dt));
+        this.speed = this.speed.add(fX.mul(dt));
+        this.speed = this.speed.add(fY.mul(dt));
+        this.p = this.p.add(this.speed.mul(dt));
+        this._rSpeed = this._rSpeed - (this._rSpeed * Math.abs(this._rSpeed) * this.cR * dt);
+        this.r += this._rSpeed * dt;
     }
     onKeyDown(key) {
         if (key === 37) {
@@ -423,6 +475,12 @@ class Fighter extends LineMesh {
         }
         if (key === 39) {
             this._r = true;
+        }
+        if (key === 38) {
+            this._u = true;
+        }
+        if (key === 40) {
+            this._d = true;
         }
     }
     onKeyUp(key) {
@@ -433,16 +491,15 @@ class Fighter extends LineMesh {
             this._r = false;
         }
         if (key === 38) {
-            this._speed += 10;
-            if (this._speed > 200) {
-                this._speed = 200;
-            }
+            this._u = false;
         }
         if (key === 40) {
-            this._speed -= 10;
-            if (this._speed < 20) {
-                this._speed = 20;
-            }
+            this._d = false;
+        }
+        if (key === 32) {
+            let bullet = new Bullet(this);
+            bullet.instantiate();
+            console.log(bullet);
         }
     }
     start() {
@@ -481,6 +538,41 @@ class Fighter extends LineMesh {
             Line.Parse("white:-1,0 1,0 0,0 0,-2 0,2"),
             Line.Parse("red:1,-1 2,-1 2,0 4,0 2,0 2,1 1,1")
         ];
+    }
+}
+class Bullet extends LineMesh {
+    constructor(owner) {
+        super("bullet");
+        this.owner = owner;
+        this._speed = V.N();
+        this._life = 1;
+        this.size = 2.5;
+        this.p = owner.pLToPW(V.N(4.5, 6).mul(owner.size));
+        this.r = owner.r;
+        this.updateTransform();
+        this._speed = this.yW.mul(200).add(owner.speed);
+    }
+    start() {
+        this.lines = [
+            Line.Parse("white:-1,-2 -1,2 0,3 1,2 1,-2 -1,-2")
+        ];
+    }
+    update() {
+        this.p = this.p.add(this._speed.mul(dt));
+        this._life -= dt;
+        if (this._life < 0) {
+            this.destroy();
+        }
+    }
+}
+class PlaneCamera extends Camera {
+    constructor(plane) {
+        super("planeCamera");
+        this.plane = plane;
+    }
+    update() {
+        this.p.x = this.p.x * 59 / 60 + this.plane.p.x / 60;
+        this.p.y = this.p.y * 59 / 60 + this.plane.p.y / 60;
     }
 }
 class EditableLine extends LineMesh {
@@ -734,16 +826,6 @@ class AltSpaceShip extends LineMesh {
         this.r = this._k / 60;
         this.s = 1.5 + Math.sin(this._k / 50);
         this._k++;
-    }
-}
-class PlaneCamera extends Camera {
-    constructor(plane) {
-        super("planeCamera");
-        this.plane = plane;
-    }
-    update() {
-        this.p.x = this.p.x * 59 / 60 + this.plane.p.x / 60;
-        this.p.y = this.p.y * 59 / 60 + this.plane.p.y / 60;
     }
 }
 class KeyboardCam extends Camera {

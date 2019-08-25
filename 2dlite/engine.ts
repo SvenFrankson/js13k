@@ -4,6 +4,8 @@ enum EngineState {
     Paused
 }
 
+var dt: number = 0.15;
+
 class Engine {
 
     public static instance: Engine;
@@ -11,6 +13,7 @@ class Engine {
     public state: EngineState = EngineState.Off;
     public activeCamera: Camera;
     public objects: GameObject[] = [];
+    public destroyTask: GameObject[] = [];
     private _pntrUp: boolean = false;
     private _pntrMv: boolean = false;
     private _pntrDn: boolean = false;
@@ -33,13 +36,20 @@ class Engine {
             )
             this.state = EngineState.Running;
         }
+        let t: number = Date.now();
         let loop = () => {
+            let now = Date.now();
+            dt = Math.min((now - t) / 1000, 1);
+            t = now;
             if (this.state === EngineState.Running) {
                 this.objects.forEach(
                     o => {
                         o.update();
                     }
                 )
+                while (this.destroyTask.length > 0) {
+                    this.destroyTask.pop().destroyNow();
+                }
                 this.objects.forEach(
                     o => {
                         o.updateTransform();
@@ -129,7 +139,7 @@ class Engine {
     public destroy() {
         this.state = EngineState.Off;
         while (this.objects.length > 0) {
-            this.objects[0].destroy();
+            this.objects[0].destroyNow();
         }
     }
 
@@ -231,6 +241,11 @@ class V {
     public mul(f: number): V {
         let z = this;
         return V.N(z.x * f, z.y * f);
+    }
+
+    public unit(): V {
+        let l = this.len();
+        return V.N(this.x / l, this.y / l);
     }
 
     public dot(v: V): number {
@@ -337,14 +352,31 @@ class GameObject {
         if (en.objects.indexOf(this) === -1) {
             en.objects.push(this);
         }
+        if (en.state === EngineState.Running) {
+            this.start();
+        }
     }
 
     public destroy(): void {
+        Engine.instance.destroyTask.push(this);
+    }
+
+    public destroyNow(): void {
         let en = Engine.instance;
         let i = en.objects.indexOf(this);
         if (i !== -1) {
             en.objects.splice(i, 1);
         }
+    }
+
+    public pLToPW(pL: V): V {
+        let z = this;
+        let cr = Math.cos(z.rW);
+        let sr = Math.sin(z.rW);
+        return V.N(
+            ((cr * pL.x - sr * pL.y) * z.sW + z.pW.x),
+            ((sr * pL.x + cr * pL.y) * z.sW + z.pW.y)
+        );
     }
 
     public start(): void { }

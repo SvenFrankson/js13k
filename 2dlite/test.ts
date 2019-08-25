@@ -1,89 +1,3 @@
-class Fighter extends LineMesh {
-
-    private _speed: number = 100;
-
-    private _l: boolean = false;
-    private _r: boolean = false;
-
-    public update(): void {
-        this.p = this.p.add(this.yW.mul(this._speed / 60));
-        if (this._l) {
-            this.r += 0.01;
-        }
-        if (this._r) {
-            this.r -= 0.01;
-        }
-    }
-
-    public onKeyDown(key: number): void {
-        if (key === 37) {
-            this._l = true;
-        }
-        if (key === 39) {
-            this._r = true;
-        }
-    }
-
-    public onKeyUp(key: number): void {
-        if (key === 37) {
-            this._l = false;
-        }
-        if (key === 39) {
-            this._r = false;
-        }
-        if (key === 38) {
-            this._speed += 10;
-            if (this._speed > 200) {
-                this._speed = 200;
-            }
-        }
-        if (key === 40) {
-            this._speed -= 10;
-            if (this._speed < 20) {
-                this._speed = 20;
-            }
-        }
-    }
-
-    public start(): void {
-        this.size = 5;
-        let line = new Line("white");
-        line.pts = [
-            V.N(1, 8),
-            V.N(2, 4),
-            V.N(2, 2),
-            V.N(4, 2),
-            V.N(4, 6),
-            V.N(5, 6),
-            V.N(5, 2),
-            V.N(14, 1),
-            V.N(15, 0),
-            V.N(14, -1),
-            V.N(6, -2),
-            V.N(2, -2),
-            V.N(1, -14),
-            V.N(3, -14),
-            V.N(4, -15),
-            V.N(4, -16),
-            V.N(1, -16),
-            V.N(1, -17)
-        ];
-        let last = line.pts.length - 1;
-        for (let i = last; i >= 0; i--) {
-            let p = line.pts[i].copy();
-            p.x *= -1;
-            line.pts.push(p);
-        }
-        line.pts.push(line.pts[0].copy());
-        this.lines = [
-            line,
-            Line.Parse("blue:-1,-1 -2,-1 -2,0 -4,0 -2,0 -2,1 -1,1"),
-            Line.Parse("white:-1,0 1,0 0,0 0,-2 0,2"),
-            Line.Parse("red:1,-1 2,-1 2,0 4,0 2,0 2,1 1,1")
-        ];
-    }
-}
-
 class EditableLine extends LineMesh {
 
     public colors: string[] = [
@@ -398,19 +312,6 @@ class AltSpaceShip extends LineMesh {
     }
 }
 
-class PlaneCamera extends Camera {
-
-    constructor(
-        public plane: Fighter
-    ) {
-        super("planeCamera");
-    }
-
-    public update(): void {
-        this.p.x = this.p.x * 59 / 60 + this.plane.p.x / 60;
-        this.p.y = this.p.y * 59 / 60 + this.plane.p.y / 60;
-    }
-}
 class KeyboardCam extends Camera {
 
     private _l: boolean = false;
