@@ -430,11 +430,11 @@ class Fighter extends LineMesh {
     constructor() {
         super(...arguments);
         this.speed = V.N();
-        this.cX = 0.005;
+        this.cX = 0.01;
         this.cY = 0.0001;
         this._rSpeed = 0;
         this.cR = 2;
-        this._thrust = 10;
+        this._thrust = 20;
         this._l = false;
         this._r = false;
         this._u = false;
@@ -442,12 +442,12 @@ class Fighter extends LineMesh {
     }
     update() {
         if (this._u) {
-            this._thrust += 10 * dt;
+            this._thrust += 20 * dt;
             this._thrust = Math.min(this._thrust, 100);
         }
         if (this._d) {
-            this._thrust -= 20 * dt;
-            this._thrust = Math.max(this._thrust, 10);
+            this._thrust -= 40 * dt;
+            this._thrust = Math.max(this._thrust, 20);
         }
         if (this._l) {
             this._rSpeed += Math.PI * 0.5 * dt;
@@ -457,7 +457,6 @@ class Fighter extends LineMesh {
             this._rSpeed -= Math.PI * 0.5 * dt;
             this._rSpeed = Math.max(this._rSpeed, -Math.PI * 0.5);
         }
-        console.log(this._thrust.toFixed(0) + " " + (this._rSpeed / (Math.PI * 2)).toFixed(2));
         let sX = this.speed.dot(this.xW);
         let sY = this.speed.dot(this.yW);
         let fX = this.xW.mul(-sX * Math.abs(sX) * this.cX);
@@ -468,39 +467,6 @@ class Fighter extends LineMesh {
         this.p = this.p.add(this.speed.mul(dt));
         this._rSpeed = this._rSpeed - (this._rSpeed * Math.abs(this._rSpeed) * this.cR * dt);
         this.r += this._rSpeed * dt;
-    }
-    onKeyDown(key) {
-        if (key === 37) {
-            this._l = true;
-        }
-        if (key === 39) {
-            this._r = true;
-        }
-        if (key === 38) {
-            this._u = true;
-        }
-        if (key === 40) {
-            this._d = true;
-        }
-    }
-    onKeyUp(key) {
-        if (key === 37) {
-            this._l = false;
-        }
-        if (key === 39) {
-            this._r = false;
-        }
-        if (key === 38) {
-            this._u = false;
-        }
-        if (key === 40) {
-            this._d = false;
-        }
-        if (key === 32) {
-            let bullet = new Bullet(this);
-            bullet.instantiate();
-            console.log(bullet);
-        }
     }
     start() {
         this.size = 5;
@@ -538,6 +504,80 @@ class Fighter extends LineMesh {
             Line.Parse("white:-1,0 1,0 0,0 0,-2 0,2"),
             Line.Parse("red:1,-1 2,-1 2,0 4,0 2,0 2,1 1,1")
         ];
+    }
+}
+class PlayerControl extends GameObject {
+    constructor(plane) {
+        super("playerControler");
+        this.plane = plane;
+    }
+    onKeyDown(key) {
+        if (key === 37) {
+            this.plane._l = true;
+        }
+        if (key === 39) {
+            this.plane._r = true;
+        }
+        if (key === 38) {
+            this.plane._u = true;
+        }
+        if (key === 40) {
+            this.plane._d = true;
+        }
+    }
+    onKeyUp(key) {
+        if (key === 37) {
+            this.plane._l = false;
+        }
+        if (key === 39) {
+            this.plane._r = false;
+        }
+        if (key === 38) {
+            this.plane._u = false;
+        }
+        if (key === 40) {
+            this.plane._d = false;
+        }
+        if (key === 32) {
+            let bullet = new Bullet(this.plane);
+            bullet.instantiate();
+            console.log(bullet);
+        }
+    }
+}
+class DummyControl extends GameObject {
+    constructor(plane, target) {
+        super("playerControler");
+        this.plane = plane;
+        this.target = target;
+    }
+    update() {
+        let targetDir = this.target.p.sub(this.plane.p);
+        let targetAngle = V.angle(this.plane.yW, targetDir);
+        let targetDist = targetDir.len();
+        this.plane._l = false;
+        this.plane._r = false;
+        this.plane._d = false;
+        this.plane._u = false;
+        if (targetAngle > 0) {
+            this.plane._l = true;
+        }
+        else if (targetAngle < 0) {
+            this.plane._r = true;
+        }
+        if (targetDist < 400) {
+            this.plane._l = !this.plane._l;
+            this.plane._r = !this.plane._r;
+        }
+        if (targetDist < 400 && Math.abs(targetAngle) > Math.PI / 2) {
+            this.plane._d = true;
+        }
+        else if (targetDist > 800 && Math.abs(targetAngle) < Math.PI / 2) {
+            this.plane._d = true;
+        }
+        else {
+            this.plane._u = true;
+        }
     }
 }
 class Bullet extends LineMesh {
@@ -914,10 +954,16 @@ window.onload = () => {
     grid.instantiate();
     let fighter = new Fighter();
     fighter.instantiate();
+    let fighterControler = new PlayerControl(fighter);
+    fighterControler.instantiate();
+    let dummyFighter = new Fighter();
+    dummyFighter.instantiate();
+    let dummyFighterControler = new DummyControl(dummyFighter, fighter);
+    dummyFighterControler.instantiate();
     let camera = new PlaneCamera(fighter);
     //let camera = new KeyboardCam();
     //camera.r = 0.8;
-    camera.setW(800, canvas);
+    camera.setW(1600, canvas);
     camera.instantiate();
     /*
     let center = new RectMesh(50, 50, "red");

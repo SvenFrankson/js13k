@@ -400,10 +400,18 @@ window.onload = () => {
     grid.instantiate();
     let fighter = new Fighter();
     fighter.instantiate();
+    let fighterControler = new PlayerControl(fighter);
+    fighterControler.instantiate();
+
+    let dummyFighter = new Fighter();
+    dummyFighter.instantiate();
+    let dummyFighterControler = new DummyControl(dummyFighter, fighter);
+    dummyFighterControler.instantiate();
+
     let camera = new PlaneCamera(fighter);
     //let camera = new KeyboardCam();
     //camera.r = 0.8;
-    camera.setW(800, canvas);
+    camera.setW(1600, canvas);
     camera.instantiate();
     /*
     let center = new RectMesh(50, 50, "red");
