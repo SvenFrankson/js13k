@@ -3,10 +3,10 @@ class Fighter extends LineMesh {
     public speed: V = V.N();
     private cX: number = 0.01;
     private cY: number = 0.0001;
-    private _rSpeed: number = 0;
+    public rSpeed: number = 0;
     private cR: number = 2;
 
-    public _thrust: number = 20;
+    public _thrust: number = 30;
     public lrInput: number = 0;
     public udInput: number = 0;
 
@@ -33,11 +33,11 @@ class Fighter extends LineMesh {
         }
         this._thrust += 20 * dt * this.udInput;
         this._thrust = Math.min(this._thrust, 100);
-        this._thrust = Math.max(this._thrust, 20);
+        this._thrust = Math.max(this._thrust, 10);
 
-        this._rSpeed += Math.PI * 0.5 * dt * this.lrInput;
-        this._rSpeed = Math.min(this._rSpeed, Math.PI * 0.5);
-        this._rSpeed = Math.max(this._rSpeed, - Math.PI * 0.5);
+        this.rSpeed += Math.PI * 0.5 * dt * this.lrInput;
+        this.rSpeed = Math.min(this.rSpeed, Math.PI * 0.5);
+        this.rSpeed = Math.max(this.rSpeed, - Math.PI * 0.5);
 
         let sX = this.speed.dot(this.xW);
         let sY = this.speed.dot(this.yW);
@@ -47,8 +47,8 @@ class Fighter extends LineMesh {
         this.speed = this.speed.add(fX.mul(dt));
         this.speed = this.speed.add(fY.mul(dt));
         this.p = this.p.add(this.speed.mul(dt));
-        this._rSpeed = this._rSpeed - (this._rSpeed * Math.abs(this._rSpeed) * this.cR * dt);
-        this.r += this._rSpeed * dt;
+        this.rSpeed = this.rSpeed - (this.rSpeed * Math.abs(this.rSpeed) * this.cR * dt);
+        this.r += this.rSpeed * dt;
     }
 
     public start(): void {
@@ -221,22 +221,11 @@ class DummyControl extends GameObject {
         let targetDir = p.sub(this.plane.p);
         let targetAngle = V.angle(this.plane.yW, targetDir);
         let targetDist = targetDir.len();
-        if (targetAngle > 0) {
-            this.plane.lrInput = 1;
+        if (isFinite(targetAngle)) {
+            this.plane.lrInput = targetAngle / (Math.PI / 2);
         }
-        else if (targetAngle < 0) {
-            this.plane.lrInput = - 1;
-        }
-        if (targetDist < 400) {
-            this.plane.lrInput = - this.plane.lrInput;
-        }
-        if (targetDist < 400 && Math.abs(targetAngle) > Math.PI / 2) {
-            this.plane.udInput = - 1;
-        }
-        else if (targetDist > 800 && Math.abs(targetAngle) < Math.PI / 2) {
-            this.plane.udInput = - 1;
-        }
-        else {
+        this.plane.udInput = - 1;
+        if (Math.abs(targetAngle) < Math.PI / 4)  {
             this.plane.udInput = 1;
         }
     }
@@ -248,34 +237,34 @@ class DummyControl extends GameObject {
         wX: V,
         wY: V
     ): void {
+        let dGo = 800;
         let dP = this.plane.pW.sub(p);
         let dist = dP.sqrLen();
-        if (dist > 400 * 400) {
-            return this.goToAction(p);
+        if (true || dist > dGo * dGo) {
+            this.goToAction(p);
         }
+        let smallFix = true;
         let dA = Angle.shortest(this.plane.rW, r);
-        if (dA > Math.PI / 3) {
-            this.plane.lrInput = 2;
-            return;
-        }
-        else if (dA < - Math.PI / 3) {
-            this.plane.lrInput = - 2;
-            return;
+        if (Math.abs(dA) > Math.PI / 8) {
+            this.plane.lrInput = Math.sign(dA);
+            smallFix = false;
         }
         let currentS = this.plane.speed.len();
         let fS = currentS / s;
-        if (fS > 1.5) {
-            this.plane.udInput = - 2;
-            return;
+        if (fS > 1.1) {
+            this.plane.udInput = - 1;
+            smallFix = false;
         }
-        else if (fS < 0.6) {
-            this.plane.udInput = 2;
-            return;
+        else if (fS < 0.9) {
+            this.plane.udInput = 1;
+            smallFix = false;
         }
-        let dX = dP.dot(wX);
-        this.plane.lrInput = dX / 200;
-        let dY = dP.dot(wY);
-        this.plane.udInput = - dY / 200;
+        if (smallFix) {
+            let dX = dP.dot(wX);
+            this.plane.lrInput = dX / dGo;
+            let dY = dP.dot(wY);
+            this.plane.udInput = - dY / dGo;
+        }
     }
 }
 

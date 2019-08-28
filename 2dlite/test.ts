@@ -403,17 +403,31 @@ window.onload = () => {
     let fighterControler = new PlayerControl(fighter);
     fighterControler.instantiate();
 
-    let wingMan = new Fighter();
-    wingMan.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
-    wingMan.instantiate();
-    let wingManControler = new DummyControl(wingMan, fighter);
-    wingManControler.task = AITask.Follow;
-    wingManControler.followPos = () => { return fighter.pLToPW(V.N(300, -300)); };
-    wingManControler.followDir = () => { return fighter.rW; };
-    wingManControler.followSpeed = () => { return fighter.speed.len(); };
-    wingManControler.followX = () => { return fighter.xW; };
-    wingManControler.followY = () => { return fighter.yW; };
-    wingManControler.instantiate();
+    let wingManR = new Fighter();
+    wingManR.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
+    wingManR.instantiate();
+
+    let wingManRControler = new DummyControl(wingManR, fighter);
+    wingManRControler.task = AITask.Follow;
+    wingManRControler.followPos = () => { return fighter.pLToPW(V.N(300, -300)); };
+    wingManRControler.followDir = () => { return fighter.rW; };
+    wingManRControler.followSpeed = () => { return fighter.speed.len(); };
+    wingManRControler.followX = () => { return fighter.xW; };
+    wingManRControler.followY = () => { return fighter.yW; };
+    wingManRControler.instantiate();
+
+    let wingManL = new Fighter();
+    wingManL.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
+    wingManL.instantiate();
+
+    let wingManLControler = new DummyControl(wingManL, fighter);
+    wingManLControler.task = AITask.Follow;
+    wingManLControler.followPos = () => { return fighter.pLToPW(V.N(-300, -300)); };
+    wingManLControler.followDir = () => { return fighter.rW; };
+    wingManLControler.followSpeed = () => { return fighter.speed.len(); };
+    wingManLControler.followX = () => { return fighter.xW; };
+    wingManLControler.followY = () => { return fighter.yW; };
+    wingManLControler.instantiate();
 
     /*
     let dummyFighter = new Fighter();
