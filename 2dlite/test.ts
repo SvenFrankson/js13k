@@ -240,11 +240,11 @@ class Grid extends LineMesh {
 
     public start(): void {
         this.lines = [];
-        for (let i = - 100; i <= 100; i += 5) {
+        for (let i = - 20; i <= 20; i ++) {
             let hLine = new Line("rgb(32, 64, 64)");
-            hLine.pts = [V.N(-100, i), V.N(100, i)];
+            hLine.pts = [V.N(-20, i).mul(50), V.N(20, i).mul(50)];
             let vLine = new Line("rgb(32, 64, 64)");
-            vLine.pts = [V.N(i, -100), V.N(i, 100)];
+            vLine.pts = [V.N(i, -20).mul(50), V.N(i, 20).mul(50)];
             this.lines.push(hLine, vLine);
         }
     }
@@ -409,7 +409,7 @@ window.onload = () => {
 
     let wingManRControler = new DummyControl(wingManR, fighter);
     wingManRControler.task = AITask.Follow;
-    wingManRControler.followPos = () => { return fighter.pLToPW(V.N(300, -300)); };
+    wingManRControler.followPos = () => { return fighter.pLToPW(V.N(300, -100)); };
     wingManRControler.followDir = () => { return fighter.rW; };
     wingManRControler.followSpeed = () => { return fighter.speed.len(); };
     wingManRControler.followX = () => { return fighter.xW; };
@@ -422,12 +422,38 @@ window.onload = () => {
 
     let wingManLControler = new DummyControl(wingManL, fighter);
     wingManLControler.task = AITask.Follow;
-    wingManLControler.followPos = () => { return fighter.pLToPW(V.N(-300, -300)); };
+    wingManLControler.followPos = () => { return fighter.pLToPW(V.N(-300, -100)); };
     wingManLControler.followDir = () => { return fighter.rW; };
     wingManLControler.followSpeed = () => { return fighter.speed.len(); };
     wingManLControler.followX = () => { return fighter.xW; };
     wingManLControler.followY = () => { return fighter.yW; };
     wingManLControler.instantiate();
+
+    let wingManR2 = new Fighter();
+    wingManR2.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
+    wingManR2.instantiate();
+
+    let wingManR2Controler = new DummyControl(wingManR2, fighter);
+    wingManR2Controler.task = AITask.Follow;
+    wingManR2Controler.followPos = () => { return fighter.pLToPW(V.N(600, -200)); };
+    wingManR2Controler.followDir = () => { return fighter.rW; };
+    wingManR2Controler.followSpeed = () => { return fighter.speed.len(); };
+    wingManR2Controler.followX = () => { return fighter.xW; };
+    wingManR2Controler.followY = () => { return fighter.yW; };
+    wingManR2Controler.instantiate();
+
+    let wingManL2 = new Fighter();
+    wingManL2.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
+    wingManL2.instantiate();
+
+    let wingManL2Controler = new DummyControl(wingManL2, fighter);
+    wingManL2Controler.task = AITask.Follow;
+    wingManL2Controler.followPos = () => { return fighter.pLToPW(V.N(-600, -200)); };
+    wingManL2Controler.followDir = () => { return fighter.rW; };
+    wingManL2Controler.followSpeed = () => { return fighter.speed.len(); };
+    wingManL2Controler.followX = () => { return fighter.xW; };
+    wingManL2Controler.followY = () => { return fighter.yW; };
+    wingManL2Controler.instantiate();
 
     /*
     let dummyFighter = new Fighter();
@@ -458,4 +484,9 @@ window.onload = () => {
     deleteButton.instantiate();
     */
     en.start();
+    
+    wingManR.lines[0].col = "cyan";
+    wingManR2.lines[0].col = "cyan";
+    wingManL.lines[0].col = "cyan";
+    wingManL2.lines[0].col = "cyan";
 }

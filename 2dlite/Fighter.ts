@@ -1,5 +1,8 @@
 class Fighter extends LineMesh {
 
+    public maxThrust: number = 100;
+    public minThrust: number = 20;
+    public airBrake: number = 1;
     public speed: V = V.N();
     private cX: number = 0.01;
     private cY: number = 0.0001;
@@ -7,8 +10,8 @@ class Fighter extends LineMesh {
     private cR: number = 2;
 
     public _thrust: number = 30;
-    public lrInput: number = 0;
-    public udInput: number = 0;
+    public dirinput: number = 0;
+    public powInput: number = 0;
 
     public debugU: Line;
     public debugD: Line;
@@ -19,30 +22,35 @@ class Fighter extends LineMesh {
         while (this.lines.length > 4) {
             this.lines.pop();
         }
-        if (this.udInput > 0) {
+        if (this.powInput > 0) {
             this.lines.push(this.debugU);
         }
-        else if (this.udInput < 0) {
+        else if (this.powInput < 0) {
             this.lines.push(this.debugD);
         }
-        if (this.lrInput > 0) {
+        if (this.dirinput > 0) {
             this.lines.push(this.debugL);
         }
-        else if (this.lrInput < 0) {
+        else if (this.dirinput < 0) {
             this.lines.push(this.debugR);
         }
-        this._thrust += 20 * dt * this.udInput;
-        this._thrust = Math.min(this._thrust, 100);
-        this._thrust = Math.max(this._thrust, 10);
+        if (this.powInput > 0) {
+            this._thrust = (this.maxThrust - this.minThrust) * this.powInput + this.minThrust;
+            this.airBrake = 1;
+        }
+        else {
+            this._thrust = this.minThrust;
+            this.airBrake = 1 + (- this.powInput);
+        }
 
-        this.rSpeed += Math.PI * 0.5 * dt * this.lrInput;
+        this.rSpeed += Math.PI * 0.5 * dt * this.dirinput;
         this.rSpeed = Math.min(this.rSpeed, Math.PI * 0.5);
         this.rSpeed = Math.max(this.rSpeed, - Math.PI * 0.5);
 
         let sX = this.speed.dot(this.xW);
         let sY = this.speed.dot(this.yW);
         let fX = this.xW.mul(- sX * Math.abs(sX) * this.cX);
-        let fY = this.yW.mul(- sY * Math.abs(sY) * this.cY);
+        let fY = this.yW.mul(- sY * Math.abs(sY) * this.cY * this.airBrake);
         this.speed = this.speed.add(this.yW.mul(this._thrust * dt));
         this.speed = this.speed.add(fX.mul(dt));
         this.speed = this.speed.add(fY.mul(dt));
@@ -81,9 +89,6 @@ class Fighter extends LineMesh {
             line.pts.push(p);
         }
         line.pts.push(line.pts[0].copy());
-        line.pts.push(
-            V.N(60, -60)
-        );
         this.lines = [
             line,
             Line.Parse("blue:-1,-1 -2,-1 -2,0 -4,0 -2,0 -2,1 -1,1"),
@@ -126,31 +131,31 @@ class PlayerControl extends GameObject {
 
     public onKeyDown(key: number): void {
         if (key === 37) {
-            this.plane.lrInput = 1;
+            this.plane.dirinput = 1;
         }
         if (key === 39) {
-            this.plane.lrInput = -1;
+            this.plane.dirinput = -1;
         }
         if (key === 38) {
-            this.plane.udInput = 1;
+            this.plane.powInput = 1;
         }
         if (key === 40) {
-            this.plane.udInput = -1;
+            this.plane.powInput = -1;
         }
     }
 
     public onKeyUp(key: number): void {
         if (key === 37) {
-            this.plane.lrInput = 0;
+            this.plane.dirinput = 0;
         }
         if (key === 39) {
-            this.plane.lrInput = 0;
+            this.plane.dirinput = 0;
         }
         if (key === 38) {
-            this.plane.udInput = 0;
+            this.plane.powInput = 0;
         }
         if (key === 40) {
-            this.plane.udInput = 0;
+            this.plane.powInput = 0;
         }
         if (key === 32) {
             let bullet = new Bullet(this.plane);
@@ -194,8 +199,8 @@ class DummyControl extends GameObject {
             this.task = AITask.Go;
         }
 
-        this.plane.lrInput = 0;
-        this.plane.udInput = 0;
+        this.plane.dirinput = 0;
+        this.plane.powInput = 0;
 
         if (this.task === AITask.Go) {
             this.goToAction(this.targetPos);
@@ -222,11 +227,11 @@ class DummyControl extends GameObject {
         let targetAngle = V.angle(this.plane.yW, targetDir);
         let targetDist = targetDir.len();
         if (isFinite(targetAngle)) {
-            this.plane.lrInput = targetAngle / (Math.PI / 2);
+            this.plane.dirinput = targetAngle / (Math.PI / 2);
         }
-        this.plane.udInput = - 1;
-        if (Math.abs(targetAngle) < Math.PI / 4)  {
-            this.plane.udInput = 1;
+        this.plane.powInput = - 1;
+        if (Math.abs(targetAngle) < Math.PI / 2)  {
+            this.plane.powInput = 1;
         }
     }
 
@@ -237,7 +242,7 @@ class DummyControl extends GameObject {
         wX: V,
         wY: V
     ): void {
-        let dGo = 800;
+        let dGo = 500;
         let dP = this.plane.pW.sub(p);
         let dist = dP.sqrLen();
         if (true || dist > dGo * dGo) {
@@ -245,25 +250,25 @@ class DummyControl extends GameObject {
         }
         let smallFix = true;
         let dA = Angle.shortest(this.plane.rW, r);
-        if (Math.abs(dA) > Math.PI / 8) {
-            this.plane.lrInput = Math.sign(dA);
+        if (Math.abs(dA) > Math.PI / 16) {
+            this.plane.dirinput = Math.sign(dA) / Math.PI;
             smallFix = false;
         }
         let currentS = this.plane.speed.len();
         let fS = currentS / s;
-        if (fS > 1.1) {
-            this.plane.udInput = - 1;
+        if (fS > 1.2) {
+            this.plane.powInput = - 1;
             smallFix = false;
         }
-        else if (fS < 0.9) {
-            this.plane.udInput = 1;
+        else if (fS < 0.8) {
+            this.plane.powInput = 1;
             smallFix = false;
         }
         if (smallFix) {
             let dX = dP.dot(wX);
-            this.plane.lrInput = dX / dGo;
+            this.plane.dirinput = (dX / dGo) * 2;
             let dY = dP.dot(wY);
-            this.plane.udInput = - dY / dGo;
+            this.plane.powInput = (- dY / dGo);
         }
     }
 }

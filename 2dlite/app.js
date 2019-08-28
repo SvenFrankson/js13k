@@ -442,41 +442,49 @@ class RectMesh extends LineMesh {
 class Fighter extends LineMesh {
     constructor() {
         super(...arguments);
+        this.maxThrust = 100;
+        this.minThrust = 20;
+        this.airBrake = 1;
         this.speed = V.N();
         this.cX = 0.01;
         this.cY = 0.0001;
         this.rSpeed = 0;
         this.cR = 2;
         this._thrust = 30;
-        this.lrInput = 0;
-        this.udInput = 0;
+        this.dirinput = 0;
+        this.powInput = 0;
     }
     update() {
         while (this.lines.length > 4) {
             this.lines.pop();
         }
-        if (this.udInput > 0) {
+        if (this.powInput > 0) {
             this.lines.push(this.debugU);
         }
-        else if (this.udInput < 0) {
+        else if (this.powInput < 0) {
             this.lines.push(this.debugD);
         }
-        if (this.lrInput > 0) {
+        if (this.dirinput > 0) {
             this.lines.push(this.debugL);
         }
-        else if (this.lrInput < 0) {
+        else if (this.dirinput < 0) {
             this.lines.push(this.debugR);
         }
-        this._thrust += 20 * dt * this.udInput;
-        this._thrust = Math.min(this._thrust, 100);
-        this._thrust = Math.max(this._thrust, 10);
-        this.rSpeed += Math.PI * 0.5 * dt * this.lrInput;
+        if (this.powInput > 0) {
+            this._thrust = (this.maxThrust - this.minThrust) * this.powInput + this.minThrust;
+            this.airBrake = 1;
+        }
+        else {
+            this._thrust = this.minThrust;
+            this.airBrake = 1 + (-this.powInput);
+        }
+        this.rSpeed += Math.PI * 0.5 * dt * this.dirinput;
         this.rSpeed = Math.min(this.rSpeed, Math.PI * 0.5);
         this.rSpeed = Math.max(this.rSpeed, -Math.PI * 0.5);
         let sX = this.speed.dot(this.xW);
         let sY = this.speed.dot(this.yW);
         let fX = this.xW.mul(-sX * Math.abs(sX) * this.cX);
-        let fY = this.yW.mul(-sY * Math.abs(sY) * this.cY);
+        let fY = this.yW.mul(-sY * Math.abs(sY) * this.cY * this.airBrake);
         this.speed = this.speed.add(this.yW.mul(this._thrust * dt));
         this.speed = this.speed.add(fX.mul(dt));
         this.speed = this.speed.add(fY.mul(dt));
@@ -514,7 +522,6 @@ class Fighter extends LineMesh {
             line.pts.push(p);
         }
         line.pts.push(line.pts[0].copy());
-        line.pts.push(V.N(60, -60));
         this.lines = [
             line,
             Line.Parse("blue:-1,-1 -2,-1 -2,0 -4,0 -2,0 -2,1 -1,1"),
@@ -553,30 +560,30 @@ class PlayerControl extends GameObject {
     }
     onKeyDown(key) {
         if (key === 37) {
-            this.plane.lrInput = 1;
+            this.plane.dirinput = 1;
         }
         if (key === 39) {
-            this.plane.lrInput = -1;
+            this.plane.dirinput = -1;
         }
         if (key === 38) {
-            this.plane.udInput = 1;
+            this.plane.powInput = 1;
         }
         if (key === 40) {
-            this.plane.udInput = -1;
+            this.plane.powInput = -1;
         }
     }
     onKeyUp(key) {
         if (key === 37) {
-            this.plane.lrInput = 0;
+            this.plane.dirinput = 0;
         }
         if (key === 39) {
-            this.plane.lrInput = 0;
+            this.plane.dirinput = 0;
         }
         if (key === 38) {
-            this.plane.udInput = 0;
+            this.plane.powInput = 0;
         }
         if (key === 40) {
-            this.plane.udInput = 0;
+            this.plane.powInput = 0;
         }
         if (key === 32) {
             let bullet = new Bullet(this.plane);
@@ -602,8 +609,8 @@ class DummyControl extends GameObject {
             this.targetPos = V.N(-1000 + 2000 * Math.random(), -1000 + 2000 * Math.random());
             this.task = AITask.Go;
         }
-        this.plane.lrInput = 0;
-        this.plane.udInput = 0;
+        this.plane.dirinput = 0;
+        this.plane.powInput = 0;
         if (this.task === AITask.Go) {
             this.goToAction(this.targetPos);
             if (V.sqrDist(this.plane.pW, this.targetPos) < 100 * 100) {
@@ -619,15 +626,15 @@ class DummyControl extends GameObject {
         let targetAngle = V.angle(this.plane.yW, targetDir);
         let targetDist = targetDir.len();
         if (isFinite(targetAngle)) {
-            this.plane.lrInput = targetAngle / (Math.PI / 2);
+            this.plane.dirinput = targetAngle / (Math.PI / 2);
         }
-        this.plane.udInput = -1;
-        if (Math.abs(targetAngle) < Math.PI / 4) {
-            this.plane.udInput = 1;
+        this.plane.powInput = -1;
+        if (Math.abs(targetAngle) < Math.PI / 2) {
+            this.plane.powInput = 1;
         }
     }
     followAction(p, r, s, wX, wY) {
-        let dGo = 800;
+        let dGo = 500;
         let dP = this.plane.pW.sub(p);
         let dist = dP.sqrLen();
         if (true || dist > dGo * dGo) {
@@ -635,25 +642,25 @@ class DummyControl extends GameObject {
         }
         let smallFix = true;
         let dA = Angle.shortest(this.plane.rW, r);
-        if (Math.abs(dA) > Math.PI / 8) {
-            this.plane.lrInput = Math.sign(dA);
+        if (Math.abs(dA) > Math.PI / 16) {
+            this.plane.dirinput = Math.sign(dA) / Math.PI;
             smallFix = false;
         }
         let currentS = this.plane.speed.len();
         let fS = currentS / s;
-        if (fS > 1.1) {
-            this.plane.udInput = -1;
+        if (fS > 1.2) {
+            this.plane.powInput = -1;
             smallFix = false;
         }
-        else if (fS < 0.9) {
-            this.plane.udInput = 1;
+        else if (fS < 0.8) {
+            this.plane.powInput = 1;
             smallFix = false;
         }
         if (smallFix) {
             let dX = dP.dot(wX);
-            this.plane.lrInput = dX / dGo;
+            this.plane.dirinput = (dX / dGo) * 2;
             let dY = dP.dot(wY);
-            this.plane.udInput = -dY / dGo;
+            this.plane.powInput = (-dY / dGo);
         }
     }
 }
@@ -885,11 +892,11 @@ class EditableLineDeleteButton extends LineMesh {
 class Grid extends LineMesh {
     start() {
         this.lines = [];
-        for (let i = -100; i <= 100; i += 5) {
+        for (let i = -20; i <= 20; i++) {
             let hLine = new Line("rgb(32, 64, 64)");
-            hLine.pts = [V.N(-100, i), V.N(100, i)];
+            hLine.pts = [V.N(-20, i).mul(50), V.N(20, i).mul(50)];
             let vLine = new Line("rgb(32, 64, 64)");
-            vLine.pts = [V.N(i, -100), V.N(i, 100)];
+            vLine.pts = [V.N(i, -20).mul(50), V.N(i, 20).mul(50)];
             this.lines.push(hLine, vLine);
         }
     }
@@ -1038,7 +1045,7 @@ window.onload = () => {
     wingManR.instantiate();
     let wingManRControler = new DummyControl(wingManR, fighter);
     wingManRControler.task = AITask.Follow;
-    wingManRControler.followPos = () => { return fighter.pLToPW(V.N(300, -300)); };
+    wingManRControler.followPos = () => { return fighter.pLToPW(V.N(300, -100)); };
     wingManRControler.followDir = () => { return fighter.rW; };
     wingManRControler.followSpeed = () => { return fighter.speed.len(); };
     wingManRControler.followX = () => { return fighter.xW; };
@@ -1049,12 +1056,34 @@ window.onload = () => {
     wingManL.instantiate();
     let wingManLControler = new DummyControl(wingManL, fighter);
     wingManLControler.task = AITask.Follow;
-    wingManLControler.followPos = () => { return fighter.pLToPW(V.N(-300, -300)); };
+    wingManLControler.followPos = () => { return fighter.pLToPW(V.N(-300, -100)); };
     wingManLControler.followDir = () => { return fighter.rW; };
     wingManLControler.followSpeed = () => { return fighter.speed.len(); };
     wingManLControler.followX = () => { return fighter.xW; };
     wingManLControler.followY = () => { return fighter.yW; };
     wingManLControler.instantiate();
+    let wingManR2 = new Fighter();
+    wingManR2.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
+    wingManR2.instantiate();
+    let wingManR2Controler = new DummyControl(wingManR2, fighter);
+    wingManR2Controler.task = AITask.Follow;
+    wingManR2Controler.followPos = () => { return fighter.pLToPW(V.N(600, -200)); };
+    wingManR2Controler.followDir = () => { return fighter.rW; };
+    wingManR2Controler.followSpeed = () => { return fighter.speed.len(); };
+    wingManR2Controler.followX = () => { return fighter.xW; };
+    wingManR2Controler.followY = () => { return fighter.yW; };
+    wingManR2Controler.instantiate();
+    let wingManL2 = new Fighter();
+    wingManL2.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
+    wingManL2.instantiate();
+    let wingManL2Controler = new DummyControl(wingManL2, fighter);
+    wingManL2Controler.task = AITask.Follow;
+    wingManL2Controler.followPos = () => { return fighter.pLToPW(V.N(-600, -200)); };
+    wingManL2Controler.followDir = () => { return fighter.rW; };
+    wingManL2Controler.followSpeed = () => { return fighter.speed.len(); };
+    wingManL2Controler.followX = () => { return fighter.xW; };
+    wingManL2Controler.followY = () => { return fighter.yW; };
+    wingManL2Controler.instantiate();
     /*
     let dummyFighter = new Fighter();
     dummyFighter.instantiate();
@@ -1083,4 +1112,8 @@ window.onload = () => {
     deleteButton.instantiate();
     */
     en.start();
+    wingManR.lines[0].col = "cyan";
+    wingManR2.lines[0].col = "cyan";
+    wingManL.lines[0].col = "cyan";
+    wingManL2.lines[0].col = "cyan";
 };
