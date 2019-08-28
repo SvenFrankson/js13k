@@ -403,10 +403,24 @@ window.onload = () => {
     let fighterControler = new PlayerControl(fighter);
     fighterControler.instantiate();
 
+    let wingMan = new Fighter();
+    wingMan.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
+    wingMan.instantiate();
+    let wingManControler = new DummyControl(wingMan, fighter);
+    wingManControler.task = AITask.Follow;
+    wingManControler.followPos = () => { return fighter.pLToPW(V.N(300, -300)); };
+    wingManControler.followDir = () => { return fighter.rW; };
+    wingManControler.followSpeed = () => { return fighter.speed.len(); };
+    wingManControler.followX = () => { return fighter.xW; };
+    wingManControler.followY = () => { return fighter.yW; };
+    wingManControler.instantiate();
+
+    /*
     let dummyFighter = new Fighter();
     dummyFighter.instantiate();
     let dummyFighterControler = new DummyControl(dummyFighter, fighter);
     dummyFighterControler.instantiate();
+    */
 
     let camera = new PlaneCamera(fighter);
     //let camera = new KeyboardCam();

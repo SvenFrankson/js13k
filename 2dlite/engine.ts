@@ -182,6 +182,20 @@ class Engine {
 }
 
 class Angle {
+
+    public static shortest(f: number, t: number): number {
+        while (t < f) {
+            t += 2 * Math.PI;
+        }
+        while (t - 2 * Math.PI > f) {
+            t -= 2 * Math.PI;
+        }
+        let d = t - f;
+        if (d < Math.PI) {
+            return d;
+        }
+        return d - 2 * Math.PI;
+    }
     public static lerp(a1: number, a2: number, t: number = 0.5): number {
         while (a2 < a1) {
             a2 += 2 * Math.PI;
