@@ -455,6 +455,14 @@ window.onload = () => {
     wingManL2Controler.followY = () => { return fighter.yW; };
     wingManL2Controler.instantiate();
 
+    let foe = new Fighter();
+    foe.p = V.N(Math.random() * 800 - 400, Math.random() * 800 - 400);
+    foe.instantiate();
+
+    let foeControler = new DummyControl(foe, fighter);
+    foeControler.task = AITask.Attack;
+    foeControler.instantiate();
+
     /*
     let dummyFighter = new Fighter();
     dummyFighter.instantiate();
@@ -489,4 +497,5 @@ window.onload = () => {
     wingManR2.lines[0].col = "cyan";
     wingManL.lines[0].col = "cyan";
     wingManL2.lines[0].col = "cyan";
+    foe.lines[0].col = "magenta";
 }

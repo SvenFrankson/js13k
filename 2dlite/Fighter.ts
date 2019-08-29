@@ -18,6 +18,9 @@ class Fighter extends LineMesh {
     public debugL: Line;
     public debugR: Line;
 
+    public gunCoolDown: number = 0.5;
+    private _gunTimer: number = 0;
+
     public update(): void {
         while (this.lines.length > 4) {
             this.lines.pop();
@@ -57,6 +60,16 @@ class Fighter extends LineMesh {
         this.p = this.p.add(this.speed.mul(dt));
         this.rSpeed = this.rSpeed - (this.rSpeed * Math.abs(this.rSpeed) * this.cR * dt);
         this.r += this.rSpeed * dt;
+
+        this._gunTimer -= dt;
+    }
+
+    public shoot(): void {
+        if (this._gunTimer <= 0) {
+            this._gunTimer = this.gunCoolDown;
+            let bullet = new Bullet(this);
+            bullet.instantiate();
+        }
     }
 
     public start(): void {
@@ -158,9 +171,7 @@ class PlayerControl extends GameObject {
             this.plane.powInput = 0;
         }
         if (key === 32) {
-            let bullet = new Bullet(this.plane);
-            bullet.instantiate();
-            console.log(bullet);
+            this.plane.shoot();
         }
     }
 }
@@ -168,7 +179,8 @@ class PlayerControl extends GameObject {
 enum AITask {
     Go,
     Follow,
-    Avoid
+    Avoid,
+    Attack
 }
 
 class DummyControl extends GameObject {
@@ -218,6 +230,12 @@ class DummyControl extends GameObject {
                 this.followY()
             );
         }
+
+        if (this.task === AITask.Attack) {
+            if (this.target) {
+                this.attackAction(this.target);
+            }
+        }
     }
 
     public goToAction(
@@ -231,6 +249,25 @@ class DummyControl extends GameObject {
         }
         this.plane.powInput = - 1;
         if (Math.abs(targetAngle) < Math.PI / 2)  {
+            this.plane.powInput = 1;
+        }
+    }
+
+    public avoidAction(
+        p: V
+    ): void {
+        let targetDir = p.sub(this.plane.p);
+        let targetAngle = V.angle(this.plane.yW, targetDir);
+        if (isFinite(targetAngle)) {
+            if (targetAngle > 0) {
+                this.plane.dirinput = targetAngle / (2 * Math.PI / 3) - 1;
+            }
+            else {
+                this.plane.dirinput = 1 - targetAngle / (2 * Math.PI / 3);
+            }
+        }
+        this.plane.powInput = 0;
+        if (Math.abs(targetAngle) > Math.PI / 4) {
             this.plane.powInput = 1;
         }
     }
@@ -256,11 +293,11 @@ class DummyControl extends GameObject {
         }
         let currentS = this.plane.speed.len();
         let fS = currentS / s;
-        if (fS > 1.2) {
+        if (fS > 1.3) {
             this.plane.powInput = - 1;
             smallFix = false;
         }
-        else if (fS < 0.8) {
+        else if (fS < 0.7) {
             this.plane.powInput = 1;
             smallFix = false;
         }
@@ -271,12 +308,29 @@ class DummyControl extends GameObject {
             this.plane.powInput = (- dY / dGo);
         }
     }
+
+    public attackAction(
+        target: Fighter
+    ): void {
+        let dP = target.pW.sub(this.plane.pW);
+        let dist = dP.len();
+        if (dist > 400) {
+            this.goToAction(target.pW);
+        }
+        else {
+            return this.avoidAction(target.pW);
+        }
+        let dA = V.angle(this.plane.yW, dP);
+        if (Math.abs(dA) < Math.PI / 16) {
+            this.plane.shoot();
+        }
+    }
 }
 
 class Bullet extends LineMesh {
 
     private _speed: V = V.N();
-    private _life: number = 1;
+    private _life: number = 3;
 
     constructor(public owner: Fighter) {
         super("bullet");
@@ -284,7 +338,7 @@ class Bullet extends LineMesh {
         this.p = owner.pLToPW(V.N(4.5, 6).mul(owner.size));
         this.r = owner.r;
         this.updateTransform();
-        this._speed = this.yW.mul(200).add(owner.speed);
+        this._speed = this.yW.mul(800).add(owner.speed);
     }
 
     public start(): void {

@@ -453,6 +453,8 @@ class Fighter extends LineMesh {
         this._thrust = 30;
         this.dirinput = 0;
         this.powInput = 0;
+        this.gunCoolDown = 0.5;
+        this._gunTimer = 0;
     }
     update() {
         while (this.lines.length > 4) {
@@ -491,6 +493,14 @@ class Fighter extends LineMesh {
         this.p = this.p.add(this.speed.mul(dt));
         this.rSpeed = this.rSpeed - (this.rSpeed * Math.abs(this.rSpeed) * this.cR * dt);
         this.r += this.rSpeed * dt;
+        this._gunTimer -= dt;
+    }
+    shoot() {
+        if (this._gunTimer <= 0) {
+            this._gunTimer = this.gunCoolDown;
+            let bullet = new Bullet(this);
+            bullet.instantiate();
+        }
     }
     start() {
         this.size = 5;
@@ -586,9 +596,7 @@ class PlayerControl extends GameObject {
             this.plane.powInput = 0;
         }
         if (key === 32) {
-            let bullet = new Bullet(this.plane);
-            bullet.instantiate();
-            console.log(bullet);
+            this.plane.shoot();
         }
     }
 }
@@ -597,6 +605,7 @@ var AITask;
     AITask[AITask["Go"] = 0] = "Go";
     AITask[AITask["Follow"] = 1] = "Follow";
     AITask[AITask["Avoid"] = 2] = "Avoid";
+    AITask[AITask["Attack"] = 3] = "Attack";
 })(AITask || (AITask = {}));
 class DummyControl extends GameObject {
     constructor(plane, target) {
@@ -620,6 +629,11 @@ class DummyControl extends GameObject {
         if (this.task === AITask.Follow) {
             this.followAction(this.followPos(), this.followDir(), this.followSpeed(), this.followX(), this.followY());
         }
+        if (this.task === AITask.Attack) {
+            if (this.target) {
+                this.attackAction(this.target);
+            }
+        }
     }
     goToAction(p) {
         let targetDir = p.sub(this.plane.p);
@@ -630,6 +644,22 @@ class DummyControl extends GameObject {
         }
         this.plane.powInput = -1;
         if (Math.abs(targetAngle) < Math.PI / 2) {
+            this.plane.powInput = 1;
+        }
+    }
+    avoidAction(p) {
+        let targetDir = p.sub(this.plane.p);
+        let targetAngle = V.angle(this.plane.yW, targetDir);
+        if (isFinite(targetAngle)) {
+            if (targetAngle > 0) {
+                this.plane.dirinput = targetAngle / (2 * Math.PI / 3) - 1;
+            }
+            else {
+                this.plane.dirinput = 1 - targetAngle / (2 * Math.PI / 3);
+            }
+        }
+        this.plane.powInput = 0;
+        if (Math.abs(targetAngle) > Math.PI / 4) {
             this.plane.powInput = 1;
         }
     }
@@ -648,11 +678,11 @@ class DummyControl extends GameObject {
         }
         let currentS = this.plane.speed.len();
         let fS = currentS / s;
-        if (fS > 1.2) {
+        if (fS > 1.3) {
             this.plane.powInput = -1;
             smallFix = false;
         }
-        else if (fS < 0.8) {
+        else if (fS < 0.7) {
             this.plane.powInput = 1;
             smallFix = false;
         }
@@ -663,18 +693,32 @@ class DummyControl extends GameObject {
             this.plane.powInput = (-dY / dGo);
         }
     }
+    attackAction(target) {
+        let dP = target.pW.sub(this.plane.pW);
+        let dist = dP.len();
+        if (dist > 400) {
+            this.goToAction(target.pW);
+        }
+        else {
+            return this.avoidAction(target.pW);
+        }
+        let dA = V.angle(this.plane.yW, dP);
+        if (Math.abs(dA) < Math.PI / 16) {
+            this.plane.shoot();
+        }
+    }
 }
 class Bullet extends LineMesh {
     constructor(owner) {
         super("bullet");
         this.owner = owner;
         this._speed = V.N();
-        this._life = 1;
+        this._life = 3;
         this.size = 2.5;
         this.p = owner.pLToPW(V.N(4.5, 6).mul(owner.size));
         this.r = owner.r;
         this.updateTransform();
-        this._speed = this.yW.mul(200).add(owner.speed);
+        this._speed = this.yW.mul(800).add(owner.speed);
     }
     start() {
         this.lines = [
@@ -1084,6 +1128,12 @@ window.onload = () => {
     wingManL2Controler.followX = () => { return fighter.xW; };
     wingManL2Controler.followY = () => { return fighter.yW; };
     wingManL2Controler.instantiate();
+    let foe = new Fighter();
+    foe.p = V.N(Math.random() * 800 - 400, Math.random() * 800 - 400);
+    foe.instantiate();
+    let foeControler = new DummyControl(foe, fighter);
+    foeControler.task = AITask.Attack;
+    foeControler.instantiate();
     /*
     let dummyFighter = new Fighter();
     dummyFighter.instantiate();
@@ -1116,4 +1166,5 @@ window.onload = () => {
     wingManR2.lines[0].col = "cyan";
     wingManL.lines[0].col = "cyan";
     wingManL2.lines[0].col = "cyan";
+    foe.lines[0].col = "magenta";
 };
