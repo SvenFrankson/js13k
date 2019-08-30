@@ -440,8 +440,10 @@ class RectMesh extends LineMesh {
     }
 }
 class Fighter extends LineMesh {
-    constructor() {
-        super(...arguments);
+    constructor(team = 0, color = "white", name = "noname", p = V.N(), r = 0, s = 1) {
+        super(name, p, r, s);
+        this.team = team;
+        this.color = color;
         this.maxThrust = 100;
         this.minThrust = 20;
         this.airBrake = 1;
@@ -455,6 +457,27 @@ class Fighter extends LineMesh {
         this.powInput = 0;
         this.gunCoolDown = 0.5;
         this._gunTimer = 0;
+        this.isAlive = true;
+        this.hitPoint = 5;
+    }
+    instantiate() {
+        super.instantiate();
+        let teamInstances = Fighter.instances.get(this.team);
+        if (!teamInstances) {
+            teamInstances = [];
+            Fighter.instances.set(this.team, teamInstances);
+        }
+        teamInstances.push(this);
+    }
+    destroy() {
+        super.destroy();
+        let teamInstances = Fighter.instances.get(this.team);
+        if (teamInstances) {
+            let i = teamInstances.indexOf(this);
+            if (i !== -1) {
+                teamInstances.splice(i, 1);
+            }
+        }
     }
     update() {
         while (this.lines.length > 4) {
@@ -502,9 +525,16 @@ class Fighter extends LineMesh {
             bullet.instantiate();
         }
     }
+    wound() {
+        this.hitPoint--;
+        if (this.hitPoint <= 0) {
+            this.destroy();
+            this.isAlive = false;
+        }
+    }
     start() {
         this.size = 5;
-        let line = new Line("white");
+        let line = new Line(this.color);
         line.pts = [
             V.N(1, 8),
             V.N(2, 4),
@@ -563,6 +593,7 @@ class Fighter extends LineMesh {
         }
     }
 }
+Fighter.instances = new Map();
 class PlayerControl extends GameObject {
     constructor(plane) {
         super("playerControler");
@@ -600,6 +631,46 @@ class PlayerControl extends GameObject {
         }
     }
 }
+class Bullet extends LineMesh {
+    constructor(owner) {
+        super("bullet");
+        this.owner = owner;
+        this._speed = V.N();
+        this._life = 3;
+        this.size = 2.5;
+        this.p = owner.pLToPW(V.N(4.5, 6).mul(owner.size));
+        this.r = owner.r;
+        this.updateTransform();
+        this._speed = this.yW.mul(800).add(owner.speed);
+    }
+    start() {
+        this.lines = [
+            Line.Parse("white:-1,-2 -1,2 0,3 1,2 1,-2 -1,-2")
+        ];
+    }
+    update() {
+        this.p = this.p.add(this._speed.mul(dt));
+        for (let i = 0; i < 2; i++) {
+            let fighters = Fighter.instances.get(i);
+            if (fighters) {
+                for (let j = 0; j < fighters.length; j++) {
+                    let f = fighters[j];
+                    if (f !== this.owner) {
+                        if (V.sqrDist(this.pW, f.pW) < 50 * 50) {
+                            f.wound();
+                            this.destroy();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        this._life -= dt;
+        if (this._life < 0) {
+            this.destroy();
+        }
+    }
+}
 var AITask;
 (function (AITask) {
     AITask[AITask["Go"] = 0] = "Go";
@@ -620,19 +691,38 @@ class DummyControl extends GameObject {
         }
         this.plane.dirinput = 0;
         this.plane.powInput = 0;
+        if (this.task !== AITask.Attack) {
+            for (let i = 0; i < 2; i++) {
+                if (i !== this.plane.team) {
+                    let fighters = Fighter.instances.get(i);
+                    if (fighters) {
+                        for (let j = 0; j < fighters.length; j++) {
+                            let f = fighters[j];
+                            if (V.sqrDist(this.pW, f.pW) < 1000 * 1000) {
+                                this.task = AITask.Attack;
+                                this.target = f;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         if (this.task === AITask.Go) {
-            this.goToAction(this.targetPos);
             if (V.sqrDist(this.plane.pW, this.targetPos) < 100 * 100) {
                 delete this.task;
+                return;
             }
+            return this.goToAction(this.targetPos);
         }
         if (this.task === AITask.Follow) {
-            this.followAction(this.followPos(), this.followDir(), this.followSpeed(), this.followX(), this.followY());
+            return this.followAction(this.followPos(), this.followDir(), this.followSpeed(), this.followX(), this.followY());
         }
         if (this.task === AITask.Attack) {
-            if (this.target) {
-                this.attackAction(this.target);
+            if (!this.target || !this.target.isAlive) {
+                delete this.task;
+                return;
             }
+            return this.attackAction(this.target);
         }
     }
     goToAction(p) {
@@ -705,31 +795,6 @@ class DummyControl extends GameObject {
         let dA = V.angle(this.plane.yW, dP);
         if (Math.abs(dA) < Math.PI / 16) {
             this.plane.shoot();
-        }
-    }
-}
-class Bullet extends LineMesh {
-    constructor(owner) {
-        super("bullet");
-        this.owner = owner;
-        this._speed = V.N();
-        this._life = 3;
-        this.size = 2.5;
-        this.p = owner.pLToPW(V.N(4.5, 6).mul(owner.size));
-        this.r = owner.r;
-        this.updateTransform();
-        this._speed = this.yW.mul(800).add(owner.speed);
-    }
-    start() {
-        this.lines = [
-            Line.Parse("white:-1,-2 -1,2 0,3 1,2 1,-2 -1,-2")
-        ];
-    }
-    update() {
-        this.p = this.p.add(this._speed.mul(dt));
-        this._life -= dt;
-        if (this._life < 0) {
-            this.destroy();
         }
     }
 }
@@ -1073,10 +1138,10 @@ class KeyboardCam extends Camera {
 }
 window.onload = () => {
     let canvas = document.getElementById("canvas");
-    canvas.width = 800;
-    canvas.height = 800;
-    canvas.style.width = "800px";
-    canvas.style.height = "800px";
+    canvas.width = 1500;
+    canvas.height = 900;
+    canvas.style.width = "1500px";
+    canvas.style.height = "900px";
     let en = new Engine(canvas);
     let grid = new Grid();
     grid.instantiate();
@@ -1084,9 +1149,11 @@ window.onload = () => {
     fighter.instantiate();
     let fighterControler = new PlayerControl(fighter);
     fighterControler.instantiate();
+    /*
     let wingManR = new Fighter();
     wingManR.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
     wingManR.instantiate();
+
     let wingManRControler = new DummyControl(wingManR, fighter);
     wingManRControler.task = AITask.Follow;
     wingManRControler.followPos = () => { return fighter.pLToPW(V.N(300, -100)); };
@@ -1095,9 +1162,11 @@ window.onload = () => {
     wingManRControler.followX = () => { return fighter.xW; };
     wingManRControler.followY = () => { return fighter.yW; };
     wingManRControler.instantiate();
+
     let wingManL = new Fighter();
     wingManL.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
     wingManL.instantiate();
+
     let wingManLControler = new DummyControl(wingManL, fighter);
     wingManLControler.task = AITask.Follow;
     wingManLControler.followPos = () => { return fighter.pLToPW(V.N(-300, -100)); };
@@ -1106,9 +1175,11 @@ window.onload = () => {
     wingManLControler.followX = () => { return fighter.xW; };
     wingManLControler.followY = () => { return fighter.yW; };
     wingManLControler.instantiate();
+
     let wingManR2 = new Fighter();
     wingManR2.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
     wingManR2.instantiate();
+
     let wingManR2Controler = new DummyControl(wingManR2, fighter);
     wingManR2Controler.task = AITask.Follow;
     wingManR2Controler.followPos = () => { return fighter.pLToPW(V.N(600, -200)); };
@@ -1117,9 +1188,11 @@ window.onload = () => {
     wingManR2Controler.followX = () => { return fighter.xW; };
     wingManR2Controler.followY = () => { return fighter.yW; };
     wingManR2Controler.instantiate();
+
     let wingManL2 = new Fighter();
     wingManL2.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
     wingManL2.instantiate();
+
     let wingManL2Controler = new DummyControl(wingManL2, fighter);
     wingManL2Controler.task = AITask.Follow;
     wingManL2Controler.followPos = () => { return fighter.pLToPW(V.N(-600, -200)); };
@@ -1128,12 +1201,23 @@ window.onload = () => {
     wingManL2Controler.followX = () => { return fighter.xW; };
     wingManL2Controler.followY = () => { return fighter.yW; };
     wingManL2Controler.instantiate();
-    let foe = new Fighter();
-    foe.p = V.N(Math.random() * 800 - 400, Math.random() * 800 - 400);
-    foe.instantiate();
-    let foeControler = new DummyControl(foe, fighter);
-    foeControler.task = AITask.Attack;
-    foeControler.instantiate();
+    */
+    for (let i = 0; i < 5; i++) {
+        let friend = new Fighter(0, "cyan");
+        friend.p = V.N(Math.random() * 800, Math.random() * 800);
+        friend.r = Math.random() * Math.PI * 2;
+        friend.instantiate();
+        let friendControler = new DummyControl(friend, fighter);
+        friendControler.instantiate();
+    }
+    for (let i = 0; i < 5; i++) {
+        let foe = new Fighter(1, "magenta");
+        foe.p = V.N(Math.random() * 800 - 800, Math.random() * 800 - 800);
+        foe.r = Math.random() * Math.PI * 2;
+        foe.instantiate();
+        let foeControler = new DummyControl(foe, fighter);
+        foeControler.instantiate();
+    }
     /*
     let dummyFighter = new Fighter();
     dummyFighter.instantiate();
@@ -1143,7 +1227,7 @@ window.onload = () => {
     let camera = new PlaneCamera(fighter);
     //let camera = new KeyboardCam();
     //camera.r = 0.8;
-    camera.setW(1600, canvas);
+    camera.setW(3400, canvas);
     camera.instantiate();
     /*
     let center = new RectMesh(50, 50, "red");
@@ -1162,9 +1246,4 @@ window.onload = () => {
     deleteButton.instantiate();
     */
     en.start();
-    wingManR.lines[0].col = "cyan";
-    wingManR2.lines[0].col = "cyan";
-    wingManL.lines[0].col = "cyan";
-    wingManL2.lines[0].col = "cyan";
-    foe.lines[0].col = "magenta";
 };

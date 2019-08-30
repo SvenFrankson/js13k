@@ -391,10 +391,10 @@ class KeyboardCam extends Camera {
 
 window.onload = () => {
     let canvas: HTMLCanvasElement = document.getElementById("canvas") as HTMLCanvasElement;
-    canvas.width = 800;
-    canvas.height = 800;
-    canvas.style.width = "800px";
-    canvas.style.height = "800px";
+    canvas.width = 1500;
+    canvas.height = 900;
+    canvas.style.width = "1500px";
+    canvas.style.height = "900px";
     let en = new Engine(canvas);
     let grid = new Grid();
     grid.instantiate();
@@ -403,6 +403,7 @@ window.onload = () => {
     let fighterControler = new PlayerControl(fighter);
     fighterControler.instantiate();
 
+    /*
     let wingManR = new Fighter();
     wingManR.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
     wingManR.instantiate();
@@ -454,14 +455,27 @@ window.onload = () => {
     wingManL2Controler.followX = () => { return fighter.xW; };
     wingManL2Controler.followY = () => { return fighter.yW; };
     wingManL2Controler.instantiate();
+    */
 
-    let foe = new Fighter();
-    foe.p = V.N(Math.random() * 800 - 400, Math.random() * 800 - 400);
-    foe.instantiate();
+    for (let i = 0; i < 5; i++) {
+        let friend = new Fighter(0, "cyan");
+        friend.p = V.N(Math.random() * 800, Math.random() * 800);
+        friend.r = Math.random() * Math.PI * 2;
+        friend.instantiate();
 
-    let foeControler = new DummyControl(foe, fighter);
-    foeControler.task = AITask.Attack;
-    foeControler.instantiate();
+        let friendControler = new DummyControl(friend, fighter);
+        friendControler.instantiate();
+    }
+
+    for (let i = 0; i < 5; i++) {
+        let foe = new Fighter(1, "magenta");
+        foe.p = V.N(Math.random() * 800 - 800, Math.random() * 800 - 800);
+        foe.r = Math.random() * Math.PI * 2;
+        foe.instantiate();
+
+        let foeControler = new DummyControl(foe, fighter);
+        foeControler.instantiate();
+    }
 
     /*
     let dummyFighter = new Fighter();
@@ -473,7 +487,7 @@ window.onload = () => {
     let camera = new PlaneCamera(fighter);
     //let camera = new KeyboardCam();
     //camera.r = 0.8;
-    camera.setW(1600, canvas);
+    camera.setW(3400, canvas);
     camera.instantiate();
     /*
     let center = new RectMesh(50, 50, "red");
@@ -492,10 +506,4 @@ window.onload = () => {
     deleteButton.instantiate();
     */
     en.start();
-    
-    wingManR.lines[0].col = "cyan";
-    wingManR2.lines[0].col = "cyan";
-    wingManL.lines[0].col = "cyan";
-    wingManL2.lines[0].col = "cyan";
-    foe.lines[0].col = "magenta";
 }
