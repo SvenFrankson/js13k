@@ -38,7 +38,7 @@ class DummyControl extends GameObject {
 
         if (this.task !== AITask.Attack) {
             for (let i = 0; i < 2; i++) {
-                if (i !== this.plane.team) {
+                if (i !== this.plane.squadron.team) {
                     let fighters = Fighter.instances.get(i);
                     if (fighters) {
                         for (let j = 0; j < fighters.length; j++) {

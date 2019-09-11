@@ -398,67 +398,15 @@ window.onload = () => {
     let en = new Engine(canvas);
     let grid = new Grid();
     grid.instantiate();
-    let fighter = new Fighter();
+    let squadPlayer = new Squadron(0);
+    squadPlayer.instantiate();
+    let fighter = new Fighter(squadPlayer);
     fighter.instantiate();
     let fighterControler = new PlayerControl(fighter);
     fighterControler.instantiate();
 
-    /*
-    let wingManR = new Fighter();
-    wingManR.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
-    wingManR.instantiate();
-
-    let wingManRControler = new DummyControl(wingManR, fighter);
-    wingManRControler.task = AITask.Follow;
-    wingManRControler.followPos = () => { return fighter.pLToPW(V.N(300, -100)); };
-    wingManRControler.followDir = () => { return fighter.rW; };
-    wingManRControler.followSpeed = () => { return fighter.speed.len(); };
-    wingManRControler.followX = () => { return fighter.xW; };
-    wingManRControler.followY = () => { return fighter.yW; };
-    wingManRControler.instantiate();
-
-    let wingManL = new Fighter();
-    wingManL.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
-    wingManL.instantiate();
-
-    let wingManLControler = new DummyControl(wingManL, fighter);
-    wingManLControler.task = AITask.Follow;
-    wingManLControler.followPos = () => { return fighter.pLToPW(V.N(-300, -100)); };
-    wingManLControler.followDir = () => { return fighter.rW; };
-    wingManLControler.followSpeed = () => { return fighter.speed.len(); };
-    wingManLControler.followX = () => { return fighter.xW; };
-    wingManLControler.followY = () => { return fighter.yW; };
-    wingManLControler.instantiate();
-
-    let wingManR2 = new Fighter();
-    wingManR2.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
-    wingManR2.instantiate();
-
-    let wingManR2Controler = new DummyControl(wingManR2, fighter);
-    wingManR2Controler.task = AITask.Follow;
-    wingManR2Controler.followPos = () => { return fighter.pLToPW(V.N(600, -200)); };
-    wingManR2Controler.followDir = () => { return fighter.rW; };
-    wingManR2Controler.followSpeed = () => { return fighter.speed.len(); };
-    wingManR2Controler.followX = () => { return fighter.xW; };
-    wingManR2Controler.followY = () => { return fighter.yW; };
-    wingManR2Controler.instantiate();
-
-    let wingManL2 = new Fighter();
-    wingManL2.p = V.N(Math.random() * 400 - 200, Math.random() * 400 - 200);
-    wingManL2.instantiate();
-
-    let wingManL2Controler = new DummyControl(wingManL2, fighter);
-    wingManL2Controler.task = AITask.Follow;
-    wingManL2Controler.followPos = () => { return fighter.pLToPW(V.N(-600, -200)); };
-    wingManL2Controler.followDir = () => { return fighter.rW; };
-    wingManL2Controler.followSpeed = () => { return fighter.speed.len(); };
-    wingManL2Controler.followX = () => { return fighter.xW; };
-    wingManL2Controler.followY = () => { return fighter.yW; };
-    wingManL2Controler.instantiate();
-    */
-
     for (let i = 0; i < 5; i++) {
-        let friend = new Fighter(0, "cyan");
+        let friend = new Fighter(squadPlayer, "cyan");
         friend.p = V.N(Math.random() * 800, Math.random() * 800);
         friend.r = Math.random() * Math.PI * 2;
         friend.instantiate();
@@ -467,8 +415,10 @@ window.onload = () => {
         friendControler.instantiate();
     }
 
+    let squadFoe = new Squadron(1);
+    squadFoe.instantiate();
     for (let i = 0; i < 5; i++) {
-        let foe = new Fighter(1, "magenta");
+        let foe = new Fighter(squadFoe, "magenta");
         foe.p = V.N(Math.random() * 800 - 800, Math.random() * 800 - 800);
         foe.r = Math.random() * Math.PI * 2;
         foe.instantiate();

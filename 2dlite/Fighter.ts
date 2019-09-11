@@ -30,7 +30,7 @@ class Fighter extends LineMesh {
     public hitPoint: number = 5;
 
     constructor(
-        public team: number = 0,
+        public squadron: Squadron,
         public color: string = "white",
         name: string = "noname",  
         p: V = V.N(),
@@ -38,31 +38,37 @@ class Fighter extends LineMesh {
         s: number = 1,
     ) {
         super(name, p, r, s);
+        this.squadron.fighters.push(this);
     }
 
     public instantiate(): void {
         super.instantiate();
-        let teamInstances = Fighter.instances.get(this.team);
+        let teamInstances = Fighter.instances.get(this.squadron.team);
         if (!teamInstances) {
             teamInstances = [];
-            Fighter.instances.set(this.team, teamInstances);
+            Fighter.instances.set(this.squadron.team, teamInstances);
         }
         teamInstances.push(this);
     }
 
     public destroy(): void {
         super.destroy();
-        let teamInstances = Fighter.instances.get(this.team);
+        let teamInstances = Fighter.instances.get(this.squadron.team);
         if (teamInstances) {
             let i = teamInstances.indexOf(this);
             if (i !== -1) {
                 teamInstances.splice(i, 1);
+            }
+            i = this.squadron.fighters.indexOf(this);
+            if (i !== -1) {
+                this.squadron.fighters.splice(i, 1);
             }
         }
     }
 
     public update(): void {
         if (Engine.instance.activeCamera instanceof PlaneCamera) {
+            this.isVisible = true;
             this.isScreenSized = false;
             this.size = 4;
             this.lines = this.lod0;
@@ -70,6 +76,9 @@ class Fighter extends LineMesh {
                 this.isScreenSized = true;
                 this.size = 1;
                 this.lines = this.lod1;
+            }
+            if (Engine.instance.activeCamera.pixelRatio < 0.1) {
+                this.isVisible = false;
             }
         }
         
@@ -136,28 +145,6 @@ class Fighter extends LineMesh {
     public start(): void {
         this.size = 3;
         let line = new Line(this.color);
-        /*
-        line.pts = [
-            V.N(1, 8),
-            V.N(2, 4),
-            V.N(2, 2),
-            V.N(4, 2),
-            V.N(4, 6),
-            V.N(5, 6),
-            V.N(5, 2),
-            V.N(14, 1),
-            V.N(15, 0),
-            V.N(14, -1),
-            V.N(6, -2),
-            V.N(2, -2),
-            V.N(1, -14),
-            V.N(3, -14),
-            V.N(4, -15),
-            V.N(4, -16),
-            V.N(1, -16),
-            V.N(1, -17),
-        ];
-        */
         line.pts = [
             V.N(0, 7),
             V.N(1, 7),
@@ -182,9 +169,9 @@ class Fighter extends LineMesh {
         }
         this.lod0 = [
             line,
-            Line.Parse("white:-2,5 2,5"),
+            Line.Parse(this.color + ":-2,5 2,5"),
             new Line(
-                "white",
+                this.color,
                 V.N(1, 2),
                 V.N(2, -1),
                 V.N(1, -2),
@@ -194,7 +181,7 @@ class Fighter extends LineMesh {
                 V.N(1, 2),
             ),
             new Line(
-                "white",
+                this.color,
                 V.N(16, 0),
                 V.N(17, -2),
                 V.N(10, -3),
@@ -202,7 +189,7 @@ class Fighter extends LineMesh {
                 V.N(16, 0)
             ),
             new Line(
-                "white",
+                this.color,
                 V.N(-16, 0),
                 V.N(-17, -2),
                 V.N(-10, -3),
@@ -210,7 +197,7 @@ class Fighter extends LineMesh {
                 V.N(-16, 0)
             ),
             new Line(
-                "white",
+                this.color,
                 V.N(10, -2),
                 V.N(10, -3),
                 V.N(2, -4),
@@ -218,18 +205,18 @@ class Fighter extends LineMesh {
                 V.N(10, -2)
             ),
             new Line(
-                "white",
+                this.color,
                 V.N(-10, -2),
                 V.N(-10, -3),
                 V.N(-2, -4),
                 V.N(-2, -3),
                 V.N(-10, -2)
             ),
-            Line.Parse("white:0,-15 5,-14"),
-            Line.Parse("white:0,-15 -5,-14"),
-            Line.Parse("white:0,7 0,8 4,8 -4,8"),
+            Line.Parse(this.color + ":0,-15 5,-14"),
+            Line.Parse(this.color + ":0,-15 -5,-14"),
+            Line.Parse(this.color + ":0,7 0,8 4,8 -4,8"),
             new Line(
-                "white",
+                this.color,
                 V.N(6, 2),
                 V.N(6, -1),
                 V.N(5, -1),
@@ -237,7 +224,7 @@ class Fighter extends LineMesh {
                 V.N(6, 2)
             ),
             new Line(
-                "white",
+                this.color,
                 V.N(9, 1),
                 V.N(9, -1),
                 V.N(8, -1),
@@ -245,7 +232,7 @@ class Fighter extends LineMesh {
                 V.N(9, 1)
             ),
             new Line(
-                "white",
+                this.color,
                 V.N(-6, 2),
                 V.N(-6, -1),
                 V.N(-5, -1),
@@ -253,7 +240,7 @@ class Fighter extends LineMesh {
                 V.N(-6, 2)
             ),
             new Line(
-                "white",
+                this.color,
                 V.N(-9, 1),
                 V.N(-9, -1),
                 V.N(-8, -1),

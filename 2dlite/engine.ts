@@ -115,7 +115,9 @@ class Engine {
                     context.fillRect(0, 0, this.canvas.width, this.canvas.height);
                     this.objects.forEach(
                         o => {
-                            o.draw(this.activeCamera, this.canvas);
+                            if (o.isVisible) {
+                                o.draw(this.activeCamera, this.canvas);
+                            }
                         }
                     )
                 }
@@ -322,6 +324,8 @@ class GameObject {
     }
     public children: GameObject[] = [];
     public collider: SCollider;
+
+    public isVisible: boolean = true;
 
     public pW: V = V.N();
     public xW: V = V.N();
