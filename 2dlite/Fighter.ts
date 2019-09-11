@@ -2,6 +2,9 @@ class Fighter extends LineMesh {
 
     public static instances: Map<number, Fighter[]> = new Map<number, Fighter[]>();
 
+    public lod0: Line[];
+    public lod1: Line[];
+
     public maxThrust: number = 100;
     public minThrust: number = 20;
     public airBrake: number = 1;
@@ -59,7 +62,19 @@ class Fighter extends LineMesh {
     }
 
     public update(): void {
-        while (this.lines.length > 4) {
+        if (Engine.instance.activeCamera instanceof PlaneCamera) {
+            this.isScreenSized = false;
+            this.size = 4;
+            this.lines = this.lod0;
+            if (Engine.instance.activeCamera.pixelRatio < 0.25) {
+                this.isScreenSized = true;
+                this.size = 1;
+                this.lines = this.lod1;
+            }
+        }
+        
+        /*
+        while (this.lines.length > 14) {
             this.lines.pop();
         }
         if (this.powInput > 0) {
@@ -74,6 +89,7 @@ class Fighter extends LineMesh {
         else if (this.dirinput < 0) {
             this.lines.push(this.debugR);
         }
+        */
         if (this.powInput > 0) {
             this._thrust = (this.maxThrust - this.minThrust) * this.powInput + this.minThrust;
             this.airBrake = 1;
@@ -118,8 +134,9 @@ class Fighter extends LineMesh {
     }
 
     public start(): void {
-        this.size = 5;
+        this.size = 3;
         let line = new Line(this.color);
+        /*
         line.pts = [
             V.N(1, 8),
             V.N(2, 4),
@@ -140,19 +157,111 @@ class Fighter extends LineMesh {
             V.N(1, -16),
             V.N(1, -17),
         ];
+        */
+        line.pts = [
+            V.N(0, 7),
+            V.N(1, 7),
+            V.N(2, 6),
+            V.N(2, 3),
+            V.N(17, 2),
+            V.N(18, 1),
+            V.N(18, -1),
+            V.N(17, -2),
+            V.N(2, -4,),
+            V.N(1, -12),
+            V.N(5, -13),
+            V.N(5, -15),
+            V.N(1, -16),
+            V.N(0, -15)
+        ]
         let last = line.pts.length - 1;
         for (let i = last; i >= 0; i--) {
             let p = line.pts[i].copy();
             p.x *= -1;
             line.pts.push(p);
         }
-        line.pts.push(line.pts[0].copy());
-        this.lines = [
+        this.lod0 = [
             line,
-            Line.Parse("blue:-1,-1 -2,-1 -2,0 -4,0 -2,0 -2,1 -1,1"),
-            Line.Parse("white:-1,0 1,0 0,0 0,-2 0,2"),
-            Line.Parse("red:1,-1 2,-1 2,0 4,0 2,0 2,1 1,1")
+            Line.Parse("white:-2,5 2,5"),
+            new Line(
+                "white",
+                V.N(1, 2),
+                V.N(2, -1),
+                V.N(1, -2),
+                V.N(-1, -2),
+                V.N(-2, -1),
+                V.N(-1, 2),
+                V.N(1, 2),
+            ),
+            new Line(
+                "white",
+                V.N(16, 0),
+                V.N(17, -2),
+                V.N(10, -3),
+                V.N(10, -1),
+                V.N(16, 0)
+            ),
+            new Line(
+                "white",
+                V.N(-16, 0),
+                V.N(-17, -2),
+                V.N(-10, -3),
+                V.N(-10, -1),
+                V.N(-16, 0)
+            ),
+            new Line(
+                "white",
+                V.N(10, -2),
+                V.N(10, -3),
+                V.N(2, -4),
+                V.N(2, -3),
+                V.N(10, -2)
+            ),
+            new Line(
+                "white",
+                V.N(-10, -2),
+                V.N(-10, -3),
+                V.N(-2, -4),
+                V.N(-2, -3),
+                V.N(-10, -2)
+            ),
+            Line.Parse("white:0,-15 5,-14"),
+            Line.Parse("white:0,-15 -5,-14"),
+            Line.Parse("white:0,7 0,8 4,8 -4,8"),
+            new Line(
+                "white",
+                V.N(6, 2),
+                V.N(6, -1),
+                V.N(5, -1),
+                V.N(5, 2),
+                V.N(6, 2)
+            ),
+            new Line(
+                "white",
+                V.N(9, 1),
+                V.N(9, -1),
+                V.N(8, -1),
+                V.N(8, 1),
+                V.N(9, 1)
+            ),
+            new Line(
+                "white",
+                V.N(-6, 2),
+                V.N(-6, -1),
+                V.N(-5, -1),
+                V.N(-5, 2),
+                V.N(-6, 2)
+            ),
+            new Line(
+                "white",
+                V.N(-9, 1),
+                V.N(-9, -1),
+                V.N(-8, -1),
+                V.N(-8, 1),
+                V.N(-9, 1)
+            )
         ];
+        this.lod1 = [line];
         let square = [
             V.N(-1, -1),
             V.N(-1, 1),
@@ -166,15 +275,15 @@ class Fighter extends LineMesh {
         }
         this.debugD = new Line("red");
         for (let i = 0; i < square.length; i++) {
-            this.debugD.pts.push(square[i].add(V.N(0, -19)));
+            this.debugD.pts.push(square[i].add(V.N(0, -18)));
         }
         this.debugL = new Line("red");
         for (let i = 0; i < square.length; i++) {
-            this.debugL.pts.push(square[i].add(V.N(-17, 0)));
+            this.debugL.pts.push(square[i].add(V.N(-20, 0)));
         }
         this.debugR = new Line("red");
         for (let i = 0; i < square.length; i++) {
-            this.debugR.pts.push(square[i].add(V.N(17, 0)));
+            this.debugR.pts.push(square[i].add(V.N(20, 0)));
         }
     }
 }

@@ -487,7 +487,7 @@ window.onload = () => {
     let camera = new PlaneCamera(fighter);
     //let camera = new KeyboardCam();
     //camera.r = 0.8;
-    camera.setW(3400, canvas);
+    camera.setW(1000, canvas);
     camera.instantiate();
     /*
     let center = new RectMesh(50, 50, "red");

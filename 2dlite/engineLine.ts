@@ -29,11 +29,13 @@ class LineMesh extends GameObject {
 
     public lines: Line[] = [];
     public size: number = 5;
+
+    public isScreenSized: boolean = false;
     
     public draw(camera: Camera, canvas: HTMLCanvasElement): void {
         let ctx = canvas.getContext("2d");
         ctx.lineCap = "round";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         let pW = this.pW;
         let rW = this.rW;
         let sW = this.sW;
@@ -45,13 +47,26 @@ class LineMesh extends GameObject {
                     return;
                 }
                 let ptsS: V[] = [];
-                for (let i = 0; i < l.pts.length; i++) {
-                    let pt = l.pts[i];
-                    let ptW = V.N(
-                        ((cr * pt.x - sr * pt.y) * this.size * sW + pW.x),
-                        ((sr * pt.x + cr * pt.y) * this.size * sW + pW.y)
-                    );
-                    ptsS.push(camera.pWToPS(ptW));
+                if (this.isScreenSized) {
+                    let ptW0 = camera.pWToPS(this.pW);
+                    for (let i = 0; i < l.pts.length; i++) {
+                        let pt = l.pts[i];
+                        let ptS = V.N(
+                            ((cr * pt.x - sr * pt.y) * this.size * sW + ptW0.x),
+                            (- (sr * pt.x + cr * pt.y) * this.size * sW + ptW0.y)
+                        );
+                        ptsS.push(ptS);
+                    }
+                }
+                else {
+                    for (let i = 0; i < l.pts.length; i++) {
+                        let pt = l.pts[i];
+                        let ptW = V.N(
+                            ((cr * pt.x - sr * pt.y) * this.size * sW + pW.x),
+                            ((sr * pt.x + cr * pt.y) * this.size * sW + pW.y)
+                        );
+                        ptsS.push(camera.pWToPS(ptW));
+                    }
                 }
                 ctx.beginPath();
                 ctx.moveTo(
