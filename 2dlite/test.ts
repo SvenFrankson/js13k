@@ -240,11 +240,11 @@ class Grid extends LineMesh {
 
     public start(): void {
         this.lines = [];
-        for (let i = - 100; i <= 100; i += 5) {
+        for (let i = - 20; i <= 20; i ++) {
             let hLine = new Line("rgb(32, 64, 64)");
-            hLine.pts = [V.N(-100, i), V.N(100, i)];
+            hLine.pts = [V.N(-20, i).mul(50), V.N(20, i).mul(50)];
             let vLine = new Line("rgb(32, 64, 64)");
-            vLine.pts = [V.N(i, -100), V.N(i, 100)];
+            vLine.pts = [V.N(i, -20).mul(50), V.N(i, 20).mul(50)];
             this.lines.push(hLine, vLine);
         }
     }
@@ -391,19 +391,53 @@ class KeyboardCam extends Camera {
 
 window.onload = () => {
     let canvas: HTMLCanvasElement = document.getElementById("canvas") as HTMLCanvasElement;
-    canvas.width = 800;
-    canvas.height = 800;
-    canvas.style.width = "800px";
-    canvas.style.height = "800px";
+    canvas.width = 1500;
+    canvas.height = 900;
+    canvas.style.width = "1500px";
+    canvas.style.height = "900px";
     let en = new Engine(canvas);
     let grid = new Grid();
     grid.instantiate();
-    let fighter = new Fighter();
+    let squadPlayer = new Squadron(0);
+    squadPlayer.instantiate();
+    let fighter = new Fighter(squadPlayer);
     fighter.instantiate();
+    let fighterControler = new PlayerControl(fighter);
+    fighterControler.instantiate();
+
+    for (let i = 0; i < 5; i++) {
+        let friend = new Fighter(squadPlayer, "cyan");
+        friend.p = V.N(Math.random() * 800, Math.random() * 800);
+        friend.r = Math.random() * Math.PI * 2;
+        friend.instantiate();
+
+        let friendControler = new DummyControl(friend, fighter);
+        friendControler.instantiate();
+    }
+
+    let squadFoe = new Squadron(1);
+    squadFoe.instantiate();
+    for (let i = 0; i < 5; i++) {
+        let foe = new Fighter(squadFoe, "magenta");
+        foe.p = V.N(Math.random() * 800 - 800, Math.random() * 800 - 800);
+        foe.r = Math.random() * Math.PI * 2;
+        foe.instantiate();
+
+        let foeControler = new DummyControl(foe, fighter);
+        foeControler.instantiate();
+    }
+
+    /*
+    let dummyFighter = new Fighter();
+    dummyFighter.instantiate();
+    let dummyFighterControler = new DummyControl(dummyFighter, fighter);
+    dummyFighterControler.instantiate();
+    */
+
     let camera = new PlaneCamera(fighter);
     //let camera = new KeyboardCam();
     //camera.r = 0.8;
-    camera.setW(800, canvas);
+    camera.setW(1000, canvas);
     camera.instantiate();
     /*
     let center = new RectMesh(50, 50, "red");

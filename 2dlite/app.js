@@ -92,7 +92,9 @@ class Engine {
                     context.fillStyle = "black";
                     context.fillRect(0, 0, this.canvas.width, this.canvas.height);
                     this.objects.forEach(o => {
-                        o.draw(this.activeCamera, this.canvas);
+                        if (o.isVisible) {
+                            o.draw(this.activeCamera, this.canvas);
+                        }
                     });
                 }
             }
@@ -150,6 +152,19 @@ class Engine {
     }
 }
 class Angle {
+    static shortest(f, t) {
+        while (t < f) {
+            t += 2 * Math.PI;
+        }
+        while (t - 2 * Math.PI > f) {
+            t -= 2 * Math.PI;
+        }
+        let d = t - f;
+        if (d < Math.PI) {
+            return d;
+        }
+        return d - 2 * Math.PI;
+    }
     static lerp(a1, a2, t = 0.5) {
         while (a2 < a1) {
             a2 += 2 * Math.PI;
@@ -242,6 +257,7 @@ class GameObject {
         this.r = r;
         this.s = s;
         this.children = [];
+        this.isVisible = true;
         this.pW = V.N();
         this.xW = V.N();
         this.yW = V.N();
@@ -387,11 +403,12 @@ class LineMesh extends GameObject {
         super(...arguments);
         this.lines = [];
         this.size = 5;
+        this.isScreenSized = false;
     }
     draw(camera, canvas) {
         let ctx = canvas.getContext("2d");
         ctx.lineCap = "round";
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         let pW = this.pW;
         let rW = this.rW;
         let sW = this.sW;
@@ -402,10 +419,20 @@ class LineMesh extends GameObject {
                 return;
             }
             let ptsS = [];
-            for (let i = 0; i < l.pts.length; i++) {
-                let pt = l.pts[i];
-                let ptW = V.N(((cr * pt.x - sr * pt.y) * this.size * sW + pW.x), ((sr * pt.x + cr * pt.y) * this.size * sW + pW.y));
-                ptsS.push(camera.pWToPS(ptW));
+            if (this.isScreenSized) {
+                let ptW0 = camera.pWToPS(this.pW);
+                for (let i = 0; i < l.pts.length; i++) {
+                    let pt = l.pts[i];
+                    let ptS = V.N(((cr * pt.x - sr * pt.y) * this.size * sW + ptW0.x), (-(sr * pt.x + cr * pt.y) * this.size * sW + ptW0.y));
+                    ptsS.push(ptS);
+                }
+            }
+            else {
+                for (let i = 0; i < l.pts.length; i++) {
+                    let pt = l.pts[i];
+                    let ptW = V.N(((cr * pt.x - sr * pt.y) * this.size * sW + pW.x), ((sr * pt.x + cr * pt.y) * this.size * sW + pW.y));
+                    ptsS.push(camera.pWToPS(ptW));
+                }
             }
             ctx.beginPath();
             ctx.moveTo(ptsS[0].x, ptsS[0].y);
@@ -427,103 +454,137 @@ class RectMesh extends LineMesh {
     }
 }
 class Fighter extends LineMesh {
-    constructor() {
-        super(...arguments);
+    constructor(squadron, color = "white", name = "noname", p = V.N(), r = 0, s = 1) {
+        super(name, p, r, s);
+        this.squadron = squadron;
+        this.color = color;
+        this.maxThrust = 100;
+        this.minThrust = 20;
+        this.airBrake = 1;
         this.speed = V.N();
-        this.cX = 0.005;
+        this.cX = 0.01;
         this.cY = 0.0001;
-        this._rSpeed = 0;
+        this.rSpeed = 0;
         this.cR = 2;
-        this._thrust = 10;
-        this._l = false;
-        this._r = false;
-        this._u = false;
-        this._d = false;
+        this._thrust = 30;
+        this.dirinput = 0;
+        this.powInput = 0;
+        this.gunCoolDown = 0.5;
+        this._gunTimer = 0;
+        this.isAlive = true;
+        this.hitPoint = 5;
+        this.squadron.fighters.push(this);
+    }
+    instantiate() {
+        super.instantiate();
+        let teamInstances = Fighter.instances.get(this.squadron.team);
+        if (!teamInstances) {
+            teamInstances = [];
+            Fighter.instances.set(this.squadron.team, teamInstances);
+        }
+        teamInstances.push(this);
+    }
+    destroy() {
+        super.destroy();
+        let teamInstances = Fighter.instances.get(this.squadron.team);
+        if (teamInstances) {
+            let i = teamInstances.indexOf(this);
+            if (i !== -1) {
+                teamInstances.splice(i, 1);
+            }
+            i = this.squadron.fighters.indexOf(this);
+            if (i !== -1) {
+                this.squadron.fighters.splice(i, 1);
+            }
+        }
     }
     update() {
-        if (this._u) {
-            this._thrust += 10 * dt;
-            this._thrust = Math.min(this._thrust, 100);
+        if (Engine.instance.activeCamera instanceof PlaneCamera) {
+            this.isVisible = true;
+            this.isScreenSized = false;
+            this.size = 4;
+            this.lines = this.lod0;
+            if (Engine.instance.activeCamera.pixelRatio < 0.25) {
+                this.isScreenSized = true;
+                this.size = 1;
+                this.lines = this.lod1;
+            }
+            if (Engine.instance.activeCamera.pixelRatio < 0.1) {
+                this.isVisible = false;
+            }
         }
-        if (this._d) {
-            this._thrust -= 20 * dt;
-            this._thrust = Math.max(this._thrust, 10);
+        /*
+        while (this.lines.length > 14) {
+            this.lines.pop();
         }
-        if (this._l) {
-            this._rSpeed += Math.PI * 0.5 * dt;
-            this._rSpeed = Math.min(this._rSpeed, Math.PI * 0.5);
+        if (this.powInput > 0) {
+            this.lines.push(this.debugU);
         }
-        if (this._r) {
-            this._rSpeed -= Math.PI * 0.5 * dt;
-            this._rSpeed = Math.max(this._rSpeed, -Math.PI * 0.5);
+        else if (this.powInput < 0) {
+            this.lines.push(this.debugD);
         }
-        console.log(this._thrust.toFixed(0) + " " + (this._rSpeed / (Math.PI * 2)).toFixed(2));
+        if (this.dirinput > 0) {
+            this.lines.push(this.debugL);
+        }
+        else if (this.dirinput < 0) {
+            this.lines.push(this.debugR);
+        }
+        */
+        if (this.powInput > 0) {
+            this._thrust = (this.maxThrust - this.minThrust) * this.powInput + this.minThrust;
+            this.airBrake = 1;
+        }
+        else {
+            this._thrust = this.minThrust;
+            this.airBrake = 1 + (-this.powInput);
+        }
+        this.rSpeed += Math.PI * 0.5 * dt * this.dirinput;
+        this.rSpeed = Math.min(this.rSpeed, Math.PI * 0.5);
+        this.rSpeed = Math.max(this.rSpeed, -Math.PI * 0.5);
         let sX = this.speed.dot(this.xW);
         let sY = this.speed.dot(this.yW);
         let fX = this.xW.mul(-sX * Math.abs(sX) * this.cX);
-        let fY = this.yW.mul(-sY * Math.abs(sY) * this.cY);
+        let fY = this.yW.mul(-sY * Math.abs(sY) * this.cY * this.airBrake);
         this.speed = this.speed.add(this.yW.mul(this._thrust * dt));
         this.speed = this.speed.add(fX.mul(dt));
         this.speed = this.speed.add(fY.mul(dt));
         this.p = this.p.add(this.speed.mul(dt));
-        this._rSpeed = this._rSpeed - (this._rSpeed * Math.abs(this._rSpeed) * this.cR * dt);
-        this.r += this._rSpeed * dt;
+        this.rSpeed = this.rSpeed - (this.rSpeed * Math.abs(this.rSpeed) * this.cR * dt);
+        this.r += this.rSpeed * dt;
+        this._gunTimer -= dt;
     }
-    onKeyDown(key) {
-        if (key === 37) {
-            this._l = true;
-        }
-        if (key === 39) {
-            this._r = true;
-        }
-        if (key === 38) {
-            this._u = true;
-        }
-        if (key === 40) {
-            this._d = true;
-        }
-    }
-    onKeyUp(key) {
-        if (key === 37) {
-            this._l = false;
-        }
-        if (key === 39) {
-            this._r = false;
-        }
-        if (key === 38) {
-            this._u = false;
-        }
-        if (key === 40) {
-            this._d = false;
-        }
-        if (key === 32) {
+    shoot() {
+        if (this._gunTimer <= 0) {
+            this._gunTimer = this.gunCoolDown;
             let bullet = new Bullet(this);
             bullet.instantiate();
-            console.log(bullet);
+        }
+    }
+    wound() {
+        this.hitPoint--;
+        if (this.hitPoint <= 0) {
+            this.destroy();
+            this.isAlive = false;
         }
     }
     start() {
-        this.size = 5;
-        let line = new Line("white");
+        this.size = 3;
+        let line = new Line(this.color);
         line.pts = [
-            V.N(1, 8),
-            V.N(2, 4),
-            V.N(2, 2),
-            V.N(4, 2),
-            V.N(4, 6),
-            V.N(5, 6),
-            V.N(5, 2),
-            V.N(14, 1),
-            V.N(15, 0),
-            V.N(14, -1),
-            V.N(6, -2),
-            V.N(2, -2),
-            V.N(1, -14),
-            V.N(3, -14),
-            V.N(4, -15),
-            V.N(4, -16),
+            V.N(0, 7),
+            V.N(1, 7),
+            V.N(2, 6),
+            V.N(2, 3),
+            V.N(17, 2),
+            V.N(18, 1),
+            V.N(18, -1),
+            V.N(17, -2),
+            V.N(2, -4),
+            V.N(1, -12),
+            V.N(5, -13),
+            V.N(5, -15),
             V.N(1, -16),
-            V.N(1, -17)
+            V.N(0, -15)
         ];
         let last = line.pts.length - 1;
         for (let i = last; i >= 0; i--) {
@@ -531,13 +592,84 @@ class Fighter extends LineMesh {
             p.x *= -1;
             line.pts.push(p);
         }
-        line.pts.push(line.pts[0].copy());
-        this.lines = [
+        this.lod0 = [
             line,
-            Line.Parse("blue:-1,-1 -2,-1 -2,0 -4,0 -2,0 -2,1 -1,1"),
-            Line.Parse("white:-1,0 1,0 0,0 0,-2 0,2"),
-            Line.Parse("red:1,-1 2,-1 2,0 4,0 2,0 2,1 1,1")
+            Line.Parse(this.color + ":-2,5 2,5"),
+            new Line(this.color, V.N(1, 2), V.N(2, -1), V.N(1, -2), V.N(-1, -2), V.N(-2, -1), V.N(-1, 2), V.N(1, 2)),
+            new Line(this.color, V.N(16, 0), V.N(17, -2), V.N(10, -3), V.N(10, -1), V.N(16, 0)),
+            new Line(this.color, V.N(-16, 0), V.N(-17, -2), V.N(-10, -3), V.N(-10, -1), V.N(-16, 0)),
+            new Line(this.color, V.N(10, -2), V.N(10, -3), V.N(2, -4), V.N(2, -3), V.N(10, -2)),
+            new Line(this.color, V.N(-10, -2), V.N(-10, -3), V.N(-2, -4), V.N(-2, -3), V.N(-10, -2)),
+            Line.Parse(this.color + ":0,-15 5,-14"),
+            Line.Parse(this.color + ":0,-15 -5,-14"),
+            Line.Parse(this.color + ":0,7 0,8 4,8 -4,8"),
+            new Line(this.color, V.N(6, 2), V.N(6, -1), V.N(5, -1), V.N(5, 2), V.N(6, 2)),
+            new Line(this.color, V.N(9, 1), V.N(9, -1), V.N(8, -1), V.N(8, 1), V.N(9, 1)),
+            new Line(this.color, V.N(-6, 2), V.N(-6, -1), V.N(-5, -1), V.N(-5, 2), V.N(-6, 2)),
+            new Line(this.color, V.N(-9, 1), V.N(-9, -1), V.N(-8, -1), V.N(-8, 1), V.N(-9, 1))
         ];
+        this.lod1 = [line];
+        let square = [
+            V.N(-1, -1),
+            V.N(-1, 1),
+            V.N(1, 1),
+            V.N(1, -1),
+            V.N(-1, -1)
+        ];
+        this.debugU = new Line("red");
+        for (let i = 0; i < square.length; i++) {
+            this.debugU.pts.push(square[i].add(V.N(0, 10)));
+        }
+        this.debugD = new Line("red");
+        for (let i = 0; i < square.length; i++) {
+            this.debugD.pts.push(square[i].add(V.N(0, -18)));
+        }
+        this.debugL = new Line("red");
+        for (let i = 0; i < square.length; i++) {
+            this.debugL.pts.push(square[i].add(V.N(-20, 0)));
+        }
+        this.debugR = new Line("red");
+        for (let i = 0; i < square.length; i++) {
+            this.debugR.pts.push(square[i].add(V.N(20, 0)));
+        }
+    }
+}
+Fighter.instances = new Map();
+class PlayerControl extends GameObject {
+    constructor(plane) {
+        super("playerControler");
+        this.plane = plane;
+    }
+    onKeyDown(key) {
+        if (key === 37) {
+            this.plane.dirinput = 1;
+        }
+        if (key === 39) {
+            this.plane.dirinput = -1;
+        }
+        if (key === 38) {
+            this.plane.powInput = 1;
+        }
+        if (key === 40) {
+            this.plane.powInput = -1;
+        }
+    }
+    onKeyUp(key) {
+        if (key === 37) {
+            this.plane.dirinput = 0;
+        }
+        if (key === 39) {
+            this.plane.dirinput = 0;
+        }
+        if (key === 38) {
+            this.plane.powInput = 0;
+        }
+        if (key === 40) {
+            this.plane.powInput = 0;
+        }
+        if (key === 32) {
+            this.plane.shoot();
+        }
     }
 }
 class Bullet extends LineMesh {
@@ -545,12 +677,12 @@ class Bullet extends LineMesh {
         super("bullet");
         this.owner = owner;
         this._speed = V.N();
-        this._life = 1;
+        this._life = 3;
         this.size = 2.5;
         this.p = owner.pLToPW(V.N(4.5, 6).mul(owner.size));
         this.r = owner.r;
         this.updateTransform();
-        this._speed = this.yW.mul(200).add(owner.speed);
+        this._speed = this.yW.mul(800).add(owner.speed);
     }
     start() {
         this.lines = [
@@ -559,9 +691,151 @@ class Bullet extends LineMesh {
     }
     update() {
         this.p = this.p.add(this._speed.mul(dt));
+        for (let i = 0; i < 2; i++) {
+            let fighters = Fighter.instances.get(i);
+            if (fighters) {
+                for (let j = 0; j < fighters.length; j++) {
+                    let f = fighters[j];
+                    if (f !== this.owner) {
+                        if (V.sqrDist(this.pW, f.pW) < 50 * 50) {
+                            f.wound();
+                            this.destroy();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
         this._life -= dt;
         if (this._life < 0) {
             this.destroy();
+        }
+    }
+}
+var AITask;
+(function (AITask) {
+    AITask[AITask["Go"] = 0] = "Go";
+    AITask[AITask["Follow"] = 1] = "Follow";
+    AITask[AITask["Avoid"] = 2] = "Avoid";
+    AITask[AITask["Attack"] = 3] = "Attack";
+})(AITask || (AITask = {}));
+class DummyControl extends GameObject {
+    constructor(plane, target) {
+        super("playerControler");
+        this.plane = plane;
+        this.target = target;
+    }
+    update() {
+        if (this.task === undefined) {
+            this.targetPos = V.N(-1000 + 2000 * Math.random(), -1000 + 2000 * Math.random());
+            this.task = AITask.Go;
+        }
+        this.plane.dirinput = 0;
+        this.plane.powInput = 0;
+        if (this.task !== AITask.Attack) {
+            for (let i = 0; i < 2; i++) {
+                if (i !== this.plane.squadron.team) {
+                    let fighters = Fighter.instances.get(i);
+                    if (fighters) {
+                        for (let j = 0; j < fighters.length; j++) {
+                            let f = fighters[j];
+                            if (V.sqrDist(this.pW, f.pW) < 1000 * 1000) {
+                                this.task = AITask.Attack;
+                                this.target = f;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (this.task === AITask.Go) {
+            if (V.sqrDist(this.plane.pW, this.targetPos) < 100 * 100) {
+                delete this.task;
+                return;
+            }
+            return this.goToAction(this.targetPos);
+        }
+        if (this.task === AITask.Follow) {
+            return this.followAction(this.followPos(), this.followDir(), this.followSpeed(), this.followX(), this.followY());
+        }
+        if (this.task === AITask.Attack) {
+            if (!this.target || !this.target.isAlive) {
+                delete this.task;
+                return;
+            }
+            return this.attackAction(this.target);
+        }
+    }
+    goToAction(p) {
+        let targetDir = p.sub(this.plane.p);
+        let targetAngle = V.angle(this.plane.yW, targetDir);
+        let targetDist = targetDir.len();
+        if (isFinite(targetAngle)) {
+            this.plane.dirinput = targetAngle / (Math.PI / 2);
+        }
+        this.plane.powInput = -1;
+        if (Math.abs(targetAngle) < Math.PI / 2) {
+            this.plane.powInput = 1;
+        }
+    }
+    avoidAction(p) {
+        let targetDir = p.sub(this.plane.p);
+        let targetAngle = V.angle(this.plane.yW, targetDir);
+        if (isFinite(targetAngle)) {
+            if (targetAngle > 0) {
+                this.plane.dirinput = targetAngle / (2 * Math.PI / 3) - 1;
+            }
+            else {
+                this.plane.dirinput = 1 - targetAngle / (2 * Math.PI / 3);
+            }
+        }
+        this.plane.powInput = 0;
+        if (Math.abs(targetAngle) > Math.PI / 4) {
+            this.plane.powInput = 1;
+        }
+    }
+    followAction(p, r, s, wX, wY) {
+        let dGo = 500;
+        let dP = this.plane.pW.sub(p);
+        let dist = dP.sqrLen();
+        if (true || dist > dGo * dGo) {
+            this.goToAction(p);
+        }
+        let smallFix = true;
+        let dA = Angle.shortest(this.plane.rW, r);
+        if (Math.abs(dA) > Math.PI / 16) {
+            this.plane.dirinput = Math.sign(dA) / Math.PI;
+            smallFix = false;
+        }
+        let currentS = this.plane.speed.len();
+        let fS = currentS / s;
+        if (fS > 1.3) {
+            this.plane.powInput = -1;
+            smallFix = false;
+        }
+        else if (fS < 0.7) {
+            this.plane.powInput = 1;
+            smallFix = false;
+        }
+        if (smallFix) {
+            let dX = dP.dot(wX);
+            this.plane.dirinput = (dX / dGo) * 2;
+            let dY = dP.dot(wY);
+            this.plane.powInput = (-dY / dGo);
+        }
+    }
+    attackAction(target) {
+        let dP = target.pW.sub(this.plane.pW);
+        let dist = dP.len();
+        if (dist > 400) {
+            this.goToAction(target.pW);
+        }
+        else {
+            return this.avoidAction(target.pW);
+        }
+        let dA = V.angle(this.plane.yW, dP);
+        if (Math.abs(dA) < Math.PI / 16) {
+            this.plane.shoot();
         }
     }
 }
@@ -571,8 +845,41 @@ class PlaneCamera extends Camera {
         this.plane = plane;
     }
     update() {
+        let value = parseFloat(document.getElementById("zoom").value);
+        this.setW(Math.pow(10, value), Engine.instance.canvas);
+        this.pixelRatio = Engine.instance.canvas.width / this.w;
+        document.getElementById("output").innerText = this.pixelRatio.toFixed(2);
         this.p.x = this.p.x * 59 / 60 + this.plane.p.x / 60;
         this.p.y = this.p.y * 59 / 60 + this.plane.p.y / 60;
+    }
+}
+class Squadron extends LineMesh {
+    constructor(team = 0) {
+        super("squadron");
+        this.team = team;
+        this.fighters = [];
+    }
+    start() {
+        this.size = 4;
+        let line = new Line("white");
+        for (let i = 0; i <= 16; i++) {
+            let cosa = Math.cos(i * Math.PI * 2 / 16);
+            let sina = Math.sin(i * Math.PI * 2 / 16);
+            let pt = V.N(cosa * 4, sina * 4);
+            line.pts.push(pt);
+        }
+        this.lines = [line];
+        this.isScreenSized = true;
+        this.size = 4;
+    }
+    update() {
+        if (Engine.instance.activeCamera instanceof PlaneCamera) {
+            this.isVisible = false;
+            if (Engine.instance.activeCamera.pixelRatio < 0.1 && this.fighters[0]) {
+                this.isVisible = true;
+                this.fighters[0].pW.copy(this.p);
+            }
+        }
     }
 }
 class EditableLine extends LineMesh {
@@ -768,11 +1075,11 @@ class EditableLineDeleteButton extends LineMesh {
 class Grid extends LineMesh {
     start() {
         this.lines = [];
-        for (let i = -100; i <= 100; i += 5) {
+        for (let i = -20; i <= 20; i++) {
             let hLine = new Line("rgb(32, 64, 64)");
-            hLine.pts = [V.N(-100, i), V.N(100, i)];
+            hLine.pts = [V.N(-20, i).mul(50), V.N(20, i).mul(50)];
             let vLine = new Line("rgb(32, 64, 64)");
-            vLine.pts = [V.N(i, -100), V.N(i, 100)];
+            vLine.pts = [V.N(i, -20).mul(50), V.N(i, 20).mul(50)];
             this.lines.push(hLine, vLine);
         }
     }
@@ -905,19 +1212,47 @@ class KeyboardCam extends Camera {
 }
 window.onload = () => {
     let canvas = document.getElementById("canvas");
-    canvas.width = 800;
-    canvas.height = 800;
-    canvas.style.width = "800px";
-    canvas.style.height = "800px";
+    canvas.width = 1500;
+    canvas.height = 900;
+    canvas.style.width = "1500px";
+    canvas.style.height = "900px";
     let en = new Engine(canvas);
     let grid = new Grid();
     grid.instantiate();
-    let fighter = new Fighter();
+    let squadPlayer = new Squadron(0);
+    squadPlayer.instantiate();
+    let fighter = new Fighter(squadPlayer);
     fighter.instantiate();
+    let fighterControler = new PlayerControl(fighter);
+    fighterControler.instantiate();
+    for (let i = 0; i < 5; i++) {
+        let friend = new Fighter(squadPlayer, "cyan");
+        friend.p = V.N(Math.random() * 800, Math.random() * 800);
+        friend.r = Math.random() * Math.PI * 2;
+        friend.instantiate();
+        let friendControler = new DummyControl(friend, fighter);
+        friendControler.instantiate();
+    }
+    let squadFoe = new Squadron(1);
+    squadFoe.instantiate();
+    for (let i = 0; i < 5; i++) {
+        let foe = new Fighter(squadFoe, "magenta");
+        foe.p = V.N(Math.random() * 800 - 800, Math.random() * 800 - 800);
+        foe.r = Math.random() * Math.PI * 2;
+        foe.instantiate();
+        let foeControler = new DummyControl(foe, fighter);
+        foeControler.instantiate();
+    }
+    /*
+    let dummyFighter = new Fighter();
+    dummyFighter.instantiate();
+    let dummyFighterControler = new DummyControl(dummyFighter, fighter);
+    dummyFighterControler.instantiate();
+    */
     let camera = new PlaneCamera(fighter);
     //let camera = new KeyboardCam();
     //camera.r = 0.8;
-    camera.setW(800, canvas);
+    camera.setW(1000, canvas);
     camera.instantiate();
     /*
     let center = new RectMesh(50, 50, "red");

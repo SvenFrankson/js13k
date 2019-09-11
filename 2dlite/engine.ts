@@ -115,7 +115,9 @@ class Engine {
                     context.fillRect(0, 0, this.canvas.width, this.canvas.height);
                     this.objects.forEach(
                         o => {
-                            o.draw(this.activeCamera, this.canvas);
+                            if (o.isVisible) {
+                                o.draw(this.activeCamera, this.canvas);
+                            }
                         }
                     )
                 }
@@ -182,6 +184,20 @@ class Engine {
 }
 
 class Angle {
+
+    public static shortest(f: number, t: number): number {
+        while (t < f) {
+            t += 2 * Math.PI;
+        }
+        while (t - 2 * Math.PI > f) {
+            t -= 2 * Math.PI;
+        }
+        let d = t - f;
+        if (d < Math.PI) {
+            return d;
+        }
+        return d - 2 * Math.PI;
+    }
     public static lerp(a1: number, a2: number, t: number = 0.5): number {
         while (a2 < a1) {
             a2 += 2 * Math.PI;
@@ -308,6 +324,8 @@ class GameObject {
     }
     public children: GameObject[] = [];
     public collider: SCollider;
+
+    public isVisible: boolean = true;
 
     public pW: V = V.N();
     public xW: V = V.N();
