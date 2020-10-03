@@ -1,8 +1,10 @@
 class Edge {
 
+    public tiles: Tile[] = [];
     public orb: boolean = false;
     public lock: boolean = false;
     public border: boolean = false;
+    public hovered: boolean = false;
 }
 
 class Tile {
@@ -28,9 +30,21 @@ class Galaxy {
     public edges: Edge[] = [];
     public zones: Tile[][];
 
+    public hoveredEdge: Edge;
+    public setHoveredEdge(edge: Edge): void {
+        if (this.hoveredEdge) {
+            this.hoveredEdge.hovered = false;
+        }
+        this.hoveredEdge = edge;
+        if (this.hoveredEdge) {
+            this.hoveredEdge.hovered = true;
+        }
+    }
+
     private _tileSprite: HTMLImageElement;
     private _tileValidSprite: HTMLImageElement;
     private _edgeSprite: HTMLImageElement;
+    private _edgeSpriteHover: HTMLImageElement;
     private _orbSprite: HTMLImageElement;
     private _plotSprite: HTMLImageElement;
     private _wallSprite: HTMLImageElement;
@@ -52,6 +66,8 @@ class Galaxy {
         this._tileValidSprite.src = "./sprites/tile-valid.png";
         this._edgeSprite = document.createElement("img");
         this._edgeSprite.src = "./sprites/light.png";
+        this._edgeSpriteHover = document.createElement("img");
+        this._edgeSpriteHover.src = "./sprites/light-hover.png";
         this._orbSprite = document.createElement("img");
         this._orbSprite.src = "./sprites/orb.png";
         this._plotSprite = document.createElement("img");
@@ -95,6 +111,7 @@ class Galaxy {
                     this.edges.push(edge);
                     tile.edges[0] = edge;
                     rightTile.edges[2] = edge;
+                    edge.tiles = [tile, rightTile];
                 }
                 if (j + 1 < this.tileCountHeight) {
                     let bottomTile = this.tiles[i][j + 1];
@@ -102,7 +119,17 @@ class Galaxy {
                     this.edges.push(edge);
                     tile.edges[1] = edge;
                     bottomTile.edges[3] = edge;
+                    edge.tiles = [tile, bottomTile];
                 }
+            }
+        }
+
+        for (let i = 0; i < this.edges.length; i++) {
+            let edge = this.edges[i];
+            if (!edge.tiles[0].orb && !edge.tiles[1].orb) {
+                if (Math.random() < 0.05) {
+                    edge.orb = true;
+                } 
             }
         }
 
@@ -239,6 +266,30 @@ class Galaxy {
                 pivotI = tile.i;
                 pivotJ = tile.j;
             }
+            let rightTile = zone.find(t => { return t.i === tile.i + 1 && t.j === tile.j; });
+            if (rightTile) {
+                let rightEdge = tile.edges[0];
+                if (rightEdge && rightEdge.orb) {
+                    if (hasOrb) {
+                        return false;
+                    }
+                    hasOrb = true;
+                    pivotI = tile.i + 0.5;
+                    pivotJ = tile.j;
+                }
+            }
+            let bottomTile = zone.find(t => { return t.i === tile.i && t.j === tile.j + 1; });
+            if (bottomTile) {
+                let bottomEdge = tile.edges[1];
+                if (bottomEdge && bottomEdge.orb) {
+                    if (hasOrb) {
+                        return false;
+                    }
+                    hasOrb = true;
+                    pivotI = tile.i;
+                    pivotJ = tile.j + 0.5;
+                }
+            }
         }
 
         if (!hasOrb) {
@@ -304,14 +355,14 @@ class Galaxy {
             for (let j = 0; j < this.tiles[i].length; j++) {
                 let tile = this.tiles[i][j];
                 let edgeRight = tile.edges[0];
-                if (edgeRight && !edgeRight.border && edgeRight.lock) {
+                if (edgeRight && !edgeRight.border && (edgeRight.lock || edgeRight.hovered && !edgeRight.orb)) {
                     let x = i * this.tileSize + this.tileSize + this.wallOffset;
                     let y = j * this.tileSize + this.wallOffset;
                     context.save();
                     context.translate(x, y);
                     context.rotate(Math.PI / 2);
                     context.drawImage(
-                        this._edgeSprite,
+                        edgeRight.lock ? this._edgeSprite : this._edgeSpriteHover,
                         0,
                         - this.tileSize / 6,
                         this.tileSize,
@@ -319,14 +370,32 @@ class Galaxy {
                     );
                     context.restore();
                 }
-                let edgeBottom = tile.edges[1];
-                if (edgeBottom && !edgeBottom.border && edgeBottom.lock) {
+                if (edgeRight && edgeRight.orb) {
                     context.drawImage(
-                        this._edgeSprite,
+                        this._orbSprite,
+                        tile.i * this.tileSize + this.tileSize * 0.5 + this.wallOffset,
+                        tile.j * this.tileSize + this.wallOffset,
+                        this.tileSize,
+                        this.tileSize
+                    );
+                }
+                let edgeBottom = tile.edges[1];
+                if (edgeBottom && !edgeBottom.border && (edgeBottom.lock || edgeBottom.hovered && !edgeBottom.orb)) {
+                    context.drawImage(
+                        edgeBottom.lock ? this._edgeSprite : this._edgeSpriteHover,
                         i * this.tileSize + this.wallOffset,
                         j * this.tileSize + this.tileSize - this.tileSize / 6 + this.wallOffset,
                         this.tileSize,
                         this.tileSize / 3
+                    );
+                }
+                if (edgeBottom && edgeBottom.orb) {
+                    context.drawImage(
+                        this._orbSprite,
+                        tile.i * this.tileSize + this.wallOffset,
+                        tile.j * this.tileSize + this.tileSize * 0.5 + this.wallOffset,
+                        this.tileSize,
+                        this.tileSize
                     );
                 }
             }
@@ -456,11 +525,19 @@ window.onload = () => {
         console.log(x + " " + y);
         let edge = game.getEdgeByPointerPosition(x, y);
         if (edge) {
-            if (!edge.border) {
+            if (!edge.border && !edge.orb) {
                 edge.lock = !edge.lock;
                 game.updateZones();
                 console.log(game.zones.length + " zones found.");
             }
         }
+    })
+
+    game.canvas.addEventListener("pointermove", (e: PointerEvent) => {
+        let x = e.clientX - game.canvas.offsetLeft;
+        let y = e.clientY - game.canvas.offsetTop;
+        console.log(x + " " + y);
+        let edge = game.getEdgeByPointerPosition(x, y);
+        game.setHoveredEdge(edge);
     })
 }
