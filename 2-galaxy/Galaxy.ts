@@ -80,25 +80,16 @@ class Galaxy {
         this._wallCornerSpriteFlip.src = "./sprites/wall-cap-right.png";
     }
 
-    public load(): void {
-        let puzzle = [
-            "01001000",
-            "10001110",
-            "00100001",
-            "00000100",
-            "00100010",
-            "10100010"
-        ];
-        this.tileCountWidth = puzzle[0].length;
-        this.tileCountHeight = puzzle.length;
+    public load(solved: boolean = false): void {
+        
+        this.tileCountWidth = 6 + 2 * Math.floor(Math.random() * 5);
+        this.tileCountHeight = 4 + 2 * Math.floor(Math.random() * 4);
+
         this.tiles = [];
         for (let i = 0; i < this.tileCountWidth; i++) {
             this.tiles[i] = [];
             for (let j = 0; j < this.tileCountHeight; j++) {
                 this.tiles[i][j] = new Tile(i, j);
-                if (puzzle[j][i] === "1") {
-                    this.tiles[i][j].orb = true;
-                }
             }
         }
 
@@ -124,14 +115,69 @@ class Galaxy {
             }
         }
 
-        for (let i = 0; i < this.edges.length; i++) {
-            let edge = this.edges[i];
-            if (!edge.tiles[0].orb && !edge.tiles[1].orb) {
-                if (Math.random() < 0.05) {
-                    edge.orb = true;
-                } 
+        let galaxy = GalaxyMaker.Generate2(this.tileCountWidth, this.tileCountHeight);
+        
+        let orbCount = 0;
+        let borderedOrbCount = 0;
+
+        for (let i = 0; i < galaxy.shapes.length; i++) {
+            let I = galaxy.positions[i].i;
+            let J = galaxy.positions[i].j;
+            let shape = galaxy.shapes[i];
+            if (shape.orbPosition === 0) {
+                this.tiles[I][J].orb = true;
+                orbCount++;
+                if (I === 0 || J === 0 || I === this.tileCountWidth - 1 || J === this.tileCountHeight) {
+                    borderedOrbCount++
+                }
+            }
+            if (shape.orbPosition === 1) {
+                this.tiles[I][J].edges[0].orb = true;
+                orbCount++;
+                if (J === 0 || J === this.tileCountHeight) {
+                    borderedOrbCount++
+                }
+            }
+            if (shape.orbPosition === 2) {
+                this.tiles[I][J].edges[1].orb = true;
+                orbCount++;
+                if (I === 0 || I === this.tileCountWidth - 1) {
+                    borderedOrbCount++
+                }
+            }
+            
+            if (solved) {
+                for (let j = 0; j < shape.solutionEdges.length; j++) {
+                    let edge = shape.solutionEdges[j];
+                    let index = I + Math.floor(edge.i / 2);
+                    let jndex = J + Math.floor(edge.j / 2);
+                    if (edge.i % 2 === 0) {
+                        if (index >= 0 && index < this.tileCountWidth) {
+                            if (jndex >= 0 && jndex < this.tileCountHeight) {
+                                if (this.tiles[index][jndex].edges[1]) {
+                                    this.tiles[index][jndex].edges[1].lock = true;
+                                }
+                            }
+                        }
+                    }
+                    if (edge.j % 2 === 0) {
+                        if (index >= 0 && index < this.tileCountWidth) {
+                            if (jndex >= 0 && jndex < this.tileCountHeight) {
+                                if (this.tiles[index][jndex].edges[0]) {
+                                    this.tiles[index][jndex].edges[0].lock = true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
+
+        let density = orbCount / (this.tileCountWidth * this.tileCountHeight) * 100;
+        document.getElementById("density").innerText = "DENSITY " + density.toFixed(0) + "%";
+
+        let borderedOrb = borderedOrbCount / orbCount * 100;
+        document.getElementById("bordered-orbs").innerText = "BORDER " + borderedOrb.toFixed(0) + "%";
 
         let clientWidth = window.innerWidth;
         let clientHeight = window.innerHeight;
@@ -147,6 +193,7 @@ class Galaxy {
         }
 
         this.tileSize = Math.min(canvasWidth / this.tileCountWidth, canvasHeight / this.tileCountHeight);
+        this.tileSize = Math.min(this.tileSize, 128);
         this.tileSize = Math.floor(this.tileSize);
         this.plotSize = this.tileSize / 3.5;
         this.wallOffset = this.tileSize / 4;
@@ -522,13 +569,11 @@ window.onload = () => {
     game.canvas.addEventListener("pointerup", (e: PointerEvent) => {
         let x = e.clientX - game.canvas.offsetLeft;
         let y = e.clientY - game.canvas.offsetTop;
-        console.log(x + " " + y);
         let edge = game.getEdgeByPointerPosition(x, y);
         if (edge) {
             if (!edge.border && !edge.orb) {
                 edge.lock = !edge.lock;
                 game.updateZones();
-                console.log(game.zones.length + " zones found.");
             }
         }
     })
@@ -536,8 +581,15 @@ window.onload = () => {
     game.canvas.addEventListener("pointermove", (e: PointerEvent) => {
         let x = e.clientX - game.canvas.offsetLeft;
         let y = e.clientY - game.canvas.offsetTop;
-        console.log(x + " " + y);
         let edge = game.getEdgeByPointerPosition(x, y);
         game.setHoveredEdge(edge);
-    })
+    });
+
+    document.getElementById("random").onclick = () => {
+        game.load();
+    };
+
+    document.getElementById("random-solved").onclick = () => {
+        game.load(true);
+    };
 }
